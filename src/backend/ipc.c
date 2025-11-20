@@ -25,8 +25,6 @@ void connect_to_ui() {
 
     // Connect
     if (connect(sockfd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
-        // If connection fails, we just print to console (fallback)
-        // printf("Warning: UI not connected. Running in console mode.\n");
         close(sockfd);
         sockfd = -1;
     }
@@ -36,28 +34,28 @@ void connect_to_ui() {
 void send_update_to_ui(SystemState *sys) {
     if (sockfd == -1) return; // No UI connected
 
-    char buffer[1024];
-    char process_list[512] = "[";
+    char buffer[4096]; // Increased buffer size for more data
+    char process_list[3000] = "[";
 
     // 1. Build Process List JSON
     for (int i = 0; i < sys->process_count; i++) {
-        char p_buff[64];
+        char p_buff[128];
         Process *p = sys->processes[i];
         
-        sprintf(p_buff, "{\"pid\": %d, \"state\": %d, \"remaining\": %d}%s", 
+        // ADDED: ct (Completion), tat (Turnaround), wt (Waiting)
+        sprintf(p_buff, "{\"pid\": %d, \"state\": %d, \"remaining\": %d, \"ct\": %d, \"tat\": %d, \"wt\": %d}%s", 
                 p->pid, p->state, p->remaining_time, 
+                p->completion_time, p->turnaround_time, p->waiting_time,
                 (i < sys->process_count - 1) ? "," : "");
         strcat(process_list, p_buff);
     }
     strcat(process_list, "]");
 
     // 2. Build Final JSON Packet
-    // Format: { "time": 5, "processes": [...] }
     sprintf(buffer, "{\"time\": %d, \"processes\": %s}\n", sys->current_time, process_list);
 
     // 3. Send to Python
     if (write(sockfd, buffer, strlen(buffer)) == -1) {
-        perror("IPC Write Error");
         close(sockfd);
         sockfd = -1;
     }

@@ -6,11 +6,10 @@
 static int rr_last_idx = -1;
 static int rr_quantum_timer = 0;
 
-// Helper: Find the index of the process to run based on algorithm
 int select_process(SystemState *sys, char *algorithm, int quantum) {
     int selected_idx = -1;
 
-    // --- 1. First Come First Serve (FCFS) ---
+    // --- FCFS ---
     if (strcmp(algorithm, "FCFS") == 0) {
         for (int i = 0; i < sys->process_count; i++) {
             Process *p = sys->processes[i];
@@ -21,7 +20,7 @@ int select_process(SystemState *sys, char *algorithm, int quantum) {
             }
         }
     }
-    // --- 2. Shortest Job First (SJF) ---
+    // --- SJF ---
     else if (strcmp(algorithm, "SJF") == 0) {
         int min_burst = 999999;
         for (int i = 0; i < sys->process_count; i++) {
@@ -34,7 +33,7 @@ int select_process(SystemState *sys, char *algorithm, int quantum) {
             }
         }
     }
-    // --- 3. Priority Scheduling ---
+    // --- Priority ---
     else if (strcmp(algorithm, "Priority") == 0) {
         int highest_priority = 999999;
         for (int i = 0; i < sys->process_count; i++) {
@@ -47,14 +46,12 @@ int select_process(SystemState *sys, char *algorithm, int quantum) {
             }
         }
     }
-    // --- 4. Round Robin (RR) ---
+    // --- RR ---
     else if (strcmp(algorithm, "RR") == 0) {
         if (sys->current_time == 0) {
             rr_last_idx = -1;
             rr_quantum_timer = 0;
         }
-
-        // Continue previous if valid and quantum not expired
         if (rr_last_idx != -1) {
             Process *prev = sys->processes[rr_last_idx];
             if (prev->state != STATE_TERMINATED && rr_quantum_timer < quantum) {
@@ -62,16 +59,12 @@ int select_process(SystemState *sys, char *algorithm, int quantum) {
                 return rr_last_idx;
             }
         }
-
-        // Find next process
         rr_quantum_timer = 1; 
         int start_pos = (rr_last_idx == -1) ? 0 : (rr_last_idx + 1) % sys->process_count;
         int count = 0;
-
         while (count < sys->process_count) {
             int idx = (start_pos + count) % sys->process_count;
             Process *p = sys->processes[idx];
-
             if (p->state != STATE_TERMINATED && p->arrival_time <= sys->current_time) {
                 rr_last_idx = idx;
                 return idx;
@@ -80,11 +73,9 @@ int select_process(SystemState *sys, char *algorithm, int quantum) {
         }
         return -1; 
     }
-
     return selected_idx;
 }
 
-// Main Simulation Loop
 void run_scheduler(SystemState *sys, char *algorithm, int quantum) {
     sys->simulation_running = true;
     int completed_processes = 0;
@@ -97,26 +88,22 @@ void run_scheduler(SystemState *sys, char *algorithm, int quantum) {
         int idx = select_process(sys, algorithm, quantum);
 
         if (idx != -1) {
-            // Run the process
             Process *p = sys->processes[idx];
             p->state = STATE_RUNNING;
             p->remaining_time--;
-            
-            // BUG FIX: Do NOT check termination here.
-            // We wait until AFTER sending the update to UI.
         }
 
-        // Update others to Ready
+        // Update Waiting Processes
         for (int i = 0; i < sys->process_count; i++) {
             if (i != idx && sys->processes[i]->state != STATE_TERMINATED && sys->processes[i]->arrival_time <= sys->current_time) {
                 sys->processes[i]->state = STATE_READY; 
             }
         }
 
-        // 1. Send Data to UI (Process is still marked RUNNING, so UI draws the block)
+        // 1. Send LIVE State (for animation)
         send_update_to_ui(sys);
 
-        // 2. NOW check if it finished
+        // 2. Check Termination & Calculate Metrics
         if (idx != -1) {
             Process *p = sys->processes[idx];
             if (p->remaining_time == 0) {
@@ -130,9 +117,15 @@ void run_scheduler(SystemState *sys, char *algorithm, int quantum) {
 
         sys->current_time++;
         pthread_mutex_unlock(&sys->lock);
-
         usleep(100000); 
     }
+
+    // --- THE FIX IS HERE ---
+    // Send one final update so the UI receives the metrics for the LAST process
+    pthread_mutex_lock(&sys->lock);
+    send_update_to_ui(sys);
+    pthread_mutex_unlock(&sys->lock);
+    // -----------------------
 
     sys->simulation_running = false;
     printf("Simulation Finished.\n");

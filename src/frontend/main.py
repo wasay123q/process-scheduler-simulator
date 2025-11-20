@@ -23,7 +23,7 @@ def main(page: ft.Page):
     page.bgcolor = COLOR_BG
     page.theme_mode = ft.ThemeMode.DARK
     page.padding = 20
-    page.window_width = 1200
+    page.window_width = 1300
     page.window_height = 850
     
     # State
@@ -33,8 +33,6 @@ def main(page: ft.Page):
     # --- 2. UI Components ---
 
     status_text = ft.Text("STATUS: IDLE", size=12, weight="bold", color=ft.Colors.GREY_400)
-    
-    # FIXED: ft.animation.Animation -> ft.Animation
     status_container = ft.Container(
         content=status_text,
         bgcolor=ft.Colors.GREY_900, padding=5, border_radius=5,
@@ -74,12 +72,16 @@ def main(page: ft.Page):
     input_bst = ft.TextField(label="Burst", value="5", width=70)
     input_pri = ft.TextField(label="Priority", value="1", width=70)
 
+    # Process Table with Metrics
     proc_table = ft.DataTable(
         columns=[
             ft.DataColumn(ft.Text("PID", color=COLOR_ACCENT)),
             ft.DataColumn(ft.Text("Arrival")),
             ft.DataColumn(ft.Text("Burst")),
             ft.DataColumn(ft.Text("Priority")),
+            ft.DataColumn(ft.Text("Comp. Time", color=ft.Colors.GREEN_400)), 
+            ft.DataColumn(ft.Text("Turnaround", color=ft.Colors.ORANGE_400)), 
+            ft.DataColumn(ft.Text("Waiting", color=ft.Colors.RED_400)),       
         ],
         rows=[],
         border=ft.border.all(1, "#333333"),
@@ -94,12 +96,16 @@ def main(page: ft.Page):
             pri = int(input_pri.value)
             processes.append((pid, arr, bst, pri))
             
+            # Initialize row with "-"
             proc_table.rows.append(
                 ft.DataRow(cells=[
                     ft.DataCell(ft.Text(str(pid), weight="bold")),
                     ft.DataCell(ft.Text(str(arr))),
                     ft.DataCell(ft.Text(str(bst))),
                     ft.DataCell(ft.Text(str(pri))),
+                    ft.DataCell(ft.Text("-", color="grey")), 
+                    ft.DataCell(ft.Text("-", color="grey")), 
+                    ft.DataCell(ft.Text("-", color="grey")), 
                 ])
             )
             input_pid.value = str(pid + 1)
@@ -131,49 +137,70 @@ def main(page: ft.Page):
     # --- LOGIC ---
 
     def update_ui_from_ipc(data):
-        """Called every 100ms when C sends data"""
         time = data.get("time", 0)
         procs = data.get("processes", [])
         
         running_pid = -1
-        for p in procs:
+        
+        # Update Table Metrics
+        for i, p in enumerate(procs):
+            if p['ct'] > 0:
+                row = proc_table.rows[i]
+                row.cells[4].content.value = str(p['ct'])
+                row.cells[4].content.color = ft.Colors.GREEN_400
+                
+                row.cells[5].content.value = str(p['tat'])
+                row.cells[5].content.color = ft.Colors.ORANGE_400
+                
+                row.cells[6].content.value = str(p['wt'])
+                row.cells[6].content.color = ft.Colors.RED_400
+
             if p['state'] == 1: # RUNNING
                 running_pid = p['pid']
-                break
         
+        # --- VISUALIZATION LOGIC ---
+        block = None
         if running_pid != -1:
+            # CASE A: Process is Running -> Colored Block
             color = P_COLORS[running_pid % len(P_COLORS)]
-            
-            # Block with Pop-in Animation
             block = ft.Container(
                 width=40, height=100, bgcolor=color, border_radius=4,
                 alignment=ft.alignment.center,
                 content=ft.Text(f"P{running_pid}", size=12, weight="bold", color="black"),
                 tooltip=f"Time: {time}\nProcess: P{running_pid}",
-                
-                # FIXED: ft.transform.Scale -> ft.Scale
                 scale=ft.Scale(0.5),
-                # FIXED: ft.animation.Animation -> ft.Animation
                 animate_scale=ft.Animation(200, ft.AnimationCurve.ELASTIC_OUT),
             )
-            timeline_row.controls.append(block)
-            block.scale = 1.0 # Trigger animation
-            
-            # Ruler Text
-            ruler_text = ft.Container(
-                width=40, alignment=ft.alignment.center,
-                content=ft.Text(str(time), size=10, color="grey")
+        else:
+            # CASE B: CPU Idle or Finished -> Transparent Spacer
+            # This ensures the ruler number still appears even if no process is running
+            block = ft.Container(
+                width=40, height=100, 
+                bgcolor=ft.Colors.with_opacity(0.05, "white"), 
+                border_radius=4,
             )
-            ruler_row.controls.append(ruler_text)
 
-            # SCROLL SYNC: Duration 100ms matches the C backend sleep speed
-            timeline_row.scroll_to(offset=-1, duration=100, curve=ft.AnimationCurve.LINEAR)
-            ruler_row.scroll_to(offset=-1, duration=100, curve=ft.AnimationCurve.LINEAR)
-            
-            page.update()
+        # Create the Ruler Label
+        ruler_text = ft.Container(
+            width=40, alignment=ft.alignment.center,
+            content=ft.Text(str(time), size=10, color="grey")
+        )
+
+        # Append Both
+        timeline_row.controls.append(block)
+        ruler_row.controls.append(ruler_text)
+        
+        # Trigger animation if it's a real block
+        if running_pid != -1:
+            block.scale = 1.0
+
+        # Scroll to keep latest in view
+        timeline_row.scroll_to(offset=-1, duration=100, curve=ft.AnimationCurve.LINEAR)
+        ruler_row.scroll_to(offset=-1, duration=100, curve=ft.AnimationCurve.LINEAR)
+        
+        page.update()
 
     def on_sim_finished():
-        """Called when C backend exits"""
         status_text.value = "STATUS: COMPLETED"
         status_text.color = ft.Colors.GREEN_400
         status_container.border = ft.border.all(1, ft.Colors.GREEN_400)
@@ -187,8 +214,13 @@ def main(page: ft.Page):
         timeline_row.controls.clear()
         ruler_row.controls.clear()
         
+        # Reset Table Metrics
+        for row in proc_table.rows:
+            row.cells[4].content.value = "-"
+            row.cells[5].content.value = "-"
+            row.cells[6].content.value = "-"
+
         global ipc
-        # Pass both callbacks
         ipc = IPCServer(update_ui_from_ipc, on_sim_finished) 
         if ipc.start():
             status_text.value = "STATUS: RUNNING..."
