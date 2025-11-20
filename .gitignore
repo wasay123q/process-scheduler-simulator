@@ -1,0 +1,31 @@
+# --- C Backend ---
+# Ignore compiled executables
+bin/
+*.exe
+*.out
+
+# Ignore intermediate object files
+obj/
+*.o
+
+# --- Python Frontend ---
+# Ignore the virtual environment (HUGE folder, never upload this)
+venv/
+.venv/
+
+# Ignore compiled python bytecode
+__pycache__/
+*.pyc
+
+# --- Project Outputs ---
+# Ignore the socket file (IPC)
+*.socket
+
+# Ignore log files (generated during runtime)
+# We keep the folder, but ignore the text files inside
+logs/*.txt
+logs/*.log
+
+# --- VS Code / System ---
+.vscode/
+.DS_Store
