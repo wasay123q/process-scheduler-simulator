@@ -34,6 +34,7 @@ void add_process(SystemState *sys, int pid, int arrival, int burst, int priority
     p->turnaround_time = 0;
     p->completion_time = 0;
     p->state = STATE_READY;
+    p->mlfq_data = NULL;  // Initialize MLFQ data as NULL
 
     // Add to the array (Critical Section protected by Mutex)
     pthread_mutex_lock(&sys->lock);

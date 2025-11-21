@@ -8,7 +8,7 @@ extern void close_ipc();
 int main(int argc, char *argv[]) {
     if (argc < 3) {
         printf("Usage: %s <Algorithm> <Quantum> <Process_Count>\n", argv[0]);
-        printf("Algorithms: FCFS, SJF, RR, Priority\n");
+        printf("Algorithms: FCFS, SJF, SRTN, Priority, RR, MLFQ\n");
         return 1;
     }
 
@@ -52,6 +52,14 @@ int main(int argc, char *argv[]) {
     printf("--------------------------------------------\n");
     printf("Average Turnaround Time: %.2f\n", avg_tat / system.process_count);
     printf("Average Waiting Time: %.2f\n", avg_wt / system.process_count);
+
+    // Cleanup: Free MLFQ data if allocated
+    for (int i = 0; i < system.process_count; i++) {
+        if (system.processes[i]->mlfq_data != NULL) {
+            free(system.processes[i]->mlfq_data);
+        }
+        free(system.processes[i]);
+    }
 
     close_ipc();
     return 0;

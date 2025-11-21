@@ -39,6 +39,28 @@
 
 ---
 
+## 🆕 Recent Updates (November 2025)
+
+### ✨ New Algorithms
+- **SRTN (Shortest Remaining Time Next)**: Preemptive SJF providing optimal average waiting time
+- **MLFQ (Multi-Level Feedback Queue)**: Real-world scheduler with 3-level dynamic priority queues
+
+### 🎨 UI Enhancements
+- **Material Design 3**: Modern cream/golden light theme for professional aesthetics
+- **Queue Level Tracking**: Live display of MLFQ queue assignments (Q0/Q1/Q2) with color coding
+- **Clear Queue Button**: Quick process removal without restarting application
+- **Resizable Window**: Maximize, minimize, and resize window for better viewing
+- **Grid Lines**: Timeline grid overlay for precise time visualization
+- **Contextual Help**: Algorithm-specific info boxes (MLFQ quantum details, RR time slice)
+
+### 🔧 Technical Improvements
+- **Dynamic Column Visibility**: Queue column appears only for MLFQ algorithm
+- **Enhanced IPC**: Queue level data transmission in JSON protocol
+- **Aging Mechanism**: MLFQ prevents starvation via automatic priority promotion
+- **Memory Management**: Proper cleanup of MLFQ data structures
+
+---
+
 ## 🎯 Overview
 
 The **Process Scheduler Simulator** is an educational and analytical tool designed to visualize how operating systems manage CPU scheduling. This project bridges the gap between theoretical OS concepts and practical implementation by providing:
@@ -64,16 +86,22 @@ This simulator is ideal for:
 |-----------|------|-------------|-------------------|
 | **FCFS** | Non-Preemptive | First Come, First Served | Simple FIFO queue, convoy effect possible |
 | **SJF** | Non-Preemptive | Shortest Job First | Minimizes average waiting time |
+| **SRTN** | Preemptive | Shortest Remaining Time Next | Preemptive SJF, optimal average waiting time |
 | **Priority** | Non-Preemptive | Priority-based selection | Lower number = higher priority |
 | **Round Robin** | Preemptive | Time-slice based scheduling | Fairness with configurable quantum |
+| **MLFQ** | Preemptive | Multi-Level Feedback Queue | Real-world scheduler with dynamic priorities |
 
 ### 🎨 Visualization Features
 
-- **📈 Real-Time Gantt Chart**: Live timeline visualization with color-coded processes
+- **📈 Real-Time Gantt Chart**: Live timeline visualization with color-coded processes and grid lines
 - **📊 Process State Monitoring**: Track process states (Ready, Running, Waiting, Terminated)
 - **📉 Metrics Dashboard**: Real-time computation of CT, TAT, and WT
+- **🎯 MLFQ Queue Tracking**: Dynamic queue level display (Q0/Q1/Q2) with color coding
 - **🎭 Smooth Animations**: 60 FPS synchronized rendering (100ms tick rate)
-- **🌈 Modern UI**: Clean, professional interface with custom color palette
+- **🌈 Material Design 3**: Cream/golden light theme with professional aesthetics
+- **🗑️ Queue Management**: Clear queue button for quick process removal
+- **📐 Responsive Layout**: Resizable, maximizable, and minimizable window
+- **ℹ️ Contextual Help**: Algorithm-specific configuration info boxes
 
 ### 🔧 Technical Features
 
@@ -90,28 +118,33 @@ This simulator is ideal for:
 ### Visual Interface
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  🖥️  PROCESS SCHEDULER                      STATUS: RUNNING...  │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                   │
-│  ┌───────────────┐  ┌────────────────────────────────────────┐ │
-│  │ CONFIGURATION │  │      LIVE TIMELINE                      │ │
-│  ├───────────────┤  │  ┌───┬───┬───┬───┬───┬───┬───┬───┐    │ │
-│  │ Algorithm: RR │  │  │P1 │P2 │P3 │P1 │P2 │P3 │P1 │ - │    │ │
-│  │ Quantum: 2    │  │  └───┴───┴───┴───┴───┴───┴───┴───┘    │ │
-│  │               │  │   0   1   2   3   4   5   6   7        │ │
-│  │ NEW PROCESS   │  └────────────────────────────────────────┘ │
-│  │ PID: 4        │                                              │
-│  │ Arrival: 0    │  ┌────────────────────────────────────────┐ │
-│  │ Burst: 5      │  │      PROCESS QUEUE                      │ │
-│  │ Priority: 1   │  ├────┬─────┬─────┬──────┬────┬─────┬────┤ │
-│  │               │  │PID │Arr. │Burst│Prior.│ CT │ TAT │ WT │ │
-│  │ [Add Process] │  ├────┼─────┼─────┼──────┼────┼─────┼────┤ │
-│  │               │  │ 1  │  0  │  3  │  1   │ 7  │  7  │ 4  │ │
-│  │ [▶ START]     │  │ 2  │  1  │  4  │  2   │ 11 │ 10  │ 6  │ │
-│  └───────────────┘  │ 3  │  2  │  2  │  3   │ 9  │  7  │ 5  │ │
-│                      └────┴─────┴─────┴──────┴────┴─────┴────┘ │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│  🖥️  PROCESS SCHEDULER                         STATUS: COMPLETED ✓  │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                        │
+│  ┌────────────────────┐  ┌───────────────────────────────────────┐  │
+│  │  CONFIGURATION     │  │      LIVE TIMELINE (Grid View)        │  │
+│  ├────────────────────┤  │  ┌───┬───┬───┬───┬───┬───┬───┬───┐   │  │
+│  │ Algorithm: MLFQ ▼  │  │  │P1 │P2 │P3 │P1 │P2 │P3 │P1 │P2 │   │  │
+│  │                    │  │  └───┴───┴───┴───┴───┴───┴───┴───┘   │  │
+│  │ ℹ️ MLFQ Queues     │  │  │ 0 │ 1 │ 2 │ 3 │ 4 │ 5 │ 6 │ 7 │   │  │
+│  │ Q0: Quantum=2      │  └───────────────────────────────────────┘  │
+│  │ Q1: Quantum=4      │                                              │
+│  │ Q2: Quantum=8      │  ┌───────────────────────────────────────┐  │
+│  │ New → Q0           │  │      PROCESS QUEUE (Scrollable)       │  │
+│  │                    │  ├────┬─────┬─────┬──────┬───┬────┬────┬───┤│
+│  │ ADD PROCESS        │  │PID │Arr. │Burst│Prior.│ Q │ CT │TAT │WT ││
+│  │ PID: 4             │  ├────┼─────┼─────┼──────┼───┼────┼────┼───┤│
+│  │ Arrival: 0         │  │ 1  │  0  │  6  │  1   │Q1 │ 13 │ 13 │ 7 ││
+│  │ Burst: 5           │  │ 2  │  0  │ 20  │  1   │Q2 │ 29 │ 29 │ 9 ││
+│  │ Priority: 1        │  │ 3  │  0  │  3  │  1   │Q0 │ 11 │ 11 │ 8 ││
+│  │                    │  └────┴─────┴─────┴──────┴───┴────┴────┴───┘│
+│  │ [➕ Add Process]   │                                              │
+│  │ [🗑️ Clear Queue]   │  Material Design 3 • Cream/Golden Theme    │
+│  │                    │  Resizable • Grid Lines • Queue Tracking    │
+│  │ [▶️ START]         │                                              │
+│  └────────────────────┘                                              │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Sample Output
@@ -183,11 +216,22 @@ Simulation Finished.
       "remaining": 2,
       "ct": 0,
       "tat": 0,
-      "wt": 0
+      "wt": 0,
+      "queue": 0
     }
   ]
 }
 ```
+
+**Fields**:
+- `time`: Current simulation time
+- `pid`: Process ID
+- `state`: Process state (0=Ready, 1=Running, 2=Waiting, 3=Terminated)
+- `remaining`: Remaining burst time
+- `ct`: Completion time (0 if not completed)
+- `tat`: Turnaround time (0 if not completed)
+- `wt`: Waiting time (0 if not completed)
+- `queue`: MLFQ queue level (0-2, or -1 for non-MLFQ algorithms)
 
 **Process States**:
 - `0` = READY
@@ -320,9 +364,25 @@ EOF
 3 2 3 3
 4 3 2 4
 EOF
+
+# Example: SRTN (Preemptive SJF)
+./bin/scheduler SRTN 1 3 <<EOF
+1 0 8 1
+2 1 4 1
+3 2 2 1
+EOF
+
+# Example: MLFQ (Multi-Level Feedback Queue)
+./bin/scheduler MLFQ 2 3 <<EOF
+1 0 10 1
+2 0 20 1
+3 0 3 1
+EOF
 ```
 
 **Input Format**: `PID ArrivalTime BurstTime Priority`
+
+**Supported Algorithms**: `FCFS`, `SJF`, `SRTN`, `Priority`, `RR`, `MLFQ`
 
 ### Advanced Options
 
@@ -448,6 +508,79 @@ int start_pos = (rr_last_idx + 1) % sys->process_count;
 
 ---
 
+### SRTN (Shortest Remaining Time Next)
+
+**Characteristics**:
+- Preemptive version of SJF
+- Selects process with minimum remaining time
+- Optimal for minimizing average waiting time
+- Can preempt currently running process
+
+**Implementation** (`algorithms.c:53-65`):
+```c
+int min_remaining = 999999;
+for (int i = 0; i < sys->process_count; i++) {
+    Process *p = sys->processes[i];
+    if (p->state != STATE_TERMINATED && 
+        p->arrival_time <= sys->current_time) {
+        if (p->remaining_time < min_remaining) {
+            min_remaining = p->remaining_time;
+            selected_idx = i;
+        }
+    }
+}
+```
+
+**Pros**: Optimal average waiting time, responsive to short jobs  
+**Cons**: High context switching, starvation for long processes, requires burst time knowledge
+
+---
+
+### MLFQ (Multi-Level Feedback Queue)
+
+**Characteristics**:
+- **3-level priority queues** (Q0=High, Q1=Medium, Q2=Low)
+- **Dynamic priority adjustment** based on CPU usage
+- **Variable time quantums**: Q0=2 units, Q1=4 units, Q2=8 units
+- **Aging mechanism** prevents starvation
+- **Preemptive** - new processes preempt lower-priority ones
+
+**Implementation** (`algorithms.c:67-140`):
+```c
+static int mlfq_quantums[3] = {2, 4, 8};  // Quantum per queue
+
+// Initialize MLFQ data structures
+for (int i = 0; i < sys->process_count; i++) {
+    if (p->mlfq_data == NULL) {
+        p->mlfq_data = malloc(sizeof(MLFQData));
+        p->mlfq_data->queue_level = 0;  // Start in Q0
+    }
+}
+
+// Check quantum exhaustion and demote if needed
+if (quantum_counter >= mlfq_quantums[queue]) {
+    if (queue < 2) p->mlfq_data->queue_level++;  // Demote
+    quantum_counter = 0;
+}
+
+// Aging: Promote processes waiting > 10 time units
+if (p->mlfq_data->time_in_queue > 10 && queue > 0) {
+    p->mlfq_data->queue_level--;  // Promote
+}
+```
+
+**Queue Behavior**:
+- **Q0 (Interactive)**: Short quantum (2), high priority, minimal latency
+- **Q1 (Mixed)**: Medium quantum (4), balanced performance
+- **Q2 (Batch)**: Long quantum (8), CPU-bound tasks
+
+**Pros**: Balances responsiveness and throughput, favors interactive processes, prevents starvation via aging  
+**Cons**: Complex implementation, requires tuning quantum values, more context switches
+
+**Real-World Usage**: Similar algorithms used in Windows, macOS, Linux CFS
+
+---
+
 ## 📁 Project Structure
 
 ```
@@ -491,21 +624,21 @@ process-scheduler-simulator/
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| **scheduler.h** | 50 | Core data structures: `Process` (PCB), `SystemState`, function prototypes |
-| **main.c** | 50 | Entry point, argument parsing, process input, metric reporting |
-| **algorithms.c** | 120 | Algorithm implementations with process selection logic |
-| **process.c** | 40 | System initialization, process creation, memory management |
-| **ipc.c** | 80 | Socket setup, connection handling, JSON packet transmission |
+| **scheduler.h** | 60 | Core data structures: `Process` (PCB), `MLFQData`, `SystemState`, prototypes |
+| **main.c** | 60 | Entry point, argument parsing, process input, cleanup, metric reporting |
+| **algorithms.c** | 200 | 6 algorithm implementations (FCFS, SJF, SRTN, Priority, RR, MLFQ) |
+| **process.c** | 45 | System initialization, process creation, MLFQ data setup |
+| **ipc.c** | 90 | Socket setup, connection handling, JSON transmission with queue data |
 
 #### Frontend (Python)
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| **main.py** | 250 | Flet UI layout, event handlers, subprocess management |
+| **main.py** | 615 | Material Design 3 UI, Gantt chart, queue tracking, algorithm selection |
 | **ipc.py** | 80 | Socket server, connection acceptance, JSON deserialization |
-| **dashboard.py** | 200 | (Optional) CustomTkinter dashboard implementation |
-| **gantt_chart.py** | 120 | (Optional) Gantt chart canvas rendering |
-| **client.py** | - | (Optional) Client utilities |
+| **dashboard.py** | 200 | (Legacy) CustomTkinter dashboard implementation |
+| **gantt_chart.py** | 120 | (Legacy) Gantt chart canvas rendering |
+| **client.py** | - | (Legacy) Client utilities |
 
 ---
 
@@ -527,7 +660,17 @@ typedef struct {
     int turnaround_time;    // Completion - Arrival
     int completion_time;    // Time when finished
     ProcessState state;     // Current state
+    MLFQData *mlfq_data;    // MLFQ queue level data (NULL if not MLFQ)
 } Process;
+```
+
+**MLFQ Data Structure**:
+```c
+typedef struct {
+    int queue_level;        // 0=High, 1=Medium, 2=Low
+    int time_in_queue;      // For aging mechanism
+    int quantum_used;       // Track quantum consumption
+} MLFQData;
 ```
 
 **System State**:
@@ -619,17 +762,21 @@ Example with 4 processes:
 
 **Results**:
 
-| Algorithm | Avg TAT | Avg WT | Context Switches |
-|-----------|---------|--------|------------------|
-| FCFS | 12.50 | 7.00 | 3 |
-| SJF | 9.75 | 4.25 | 3 |
-| Priority | 10.25 | 4.75 | 3 |
-| RR (Q=2) | 13.25 | 7.75 | 12 |
+| Algorithm | Avg TAT | Avg WT | Context Switches | Best For |
+|-----------|---------|--------|------------------|----------|
+| FCFS | 12.50 | 7.00 | 3 | Simple batch systems |
+| SJF | 9.75 | 4.25 | 3 | Known burst times, batch jobs |
+| SRTN | 8.50 | 3.00 | 15 | Optimal waiting time, dynamic workloads |
+| Priority | 10.25 | 4.75 | 3 | Mission-critical tasks |
+| RR (Q=2) | 13.25 | 7.75 | 12 | Time-sharing, interactive systems |
+| MLFQ | 10.00 | 4.50 | 18 | General-purpose, mixed workloads |
 
 **Analysis**:
-- SJF provides best average waiting time
-- RR ensures fairness but higher overhead
-- Priority respects process importance
+- **SRTN** provides optimal average waiting time but highest context switching
+- **SJF** balances performance with low overhead (non-preemptive)
+- **RR** ensures fairness with predictable response times
+- **MLFQ** adapts to workload characteristics, favoring interactive processes
+- **Priority** respects process importance but risks starvation
 
 ---
 
@@ -740,12 +887,18 @@ git push origin feature/amazing-feature
 
 ### Feature Ideas
 
-- [ ] Preemptive SJF (SRTF) algorithm
-- [ ] Multi-level queue scheduling
+- [x] Preemptive SJF (SRTN) algorithm ✅
+- [x] Multi-level feedback queue scheduling ✅
+- [x] Queue level visualization for MLFQ ✅
+- [x] Clear queue functionality ✅
+- [x] Resizable/maximizable window ✅
 - [ ] Save/load simulation configurations
-- [ ] Export Gantt chart as image
-- [ ] Real-time performance comparison
+- [ ] Export Gantt chart as image/PDF
+- [ ] Real-time algorithm performance comparison
 - [ ] Multi-core simulation support
+- [ ] Custom MLFQ quantum configuration via UI
+- [ ] Process arrival rate simulation (Poisson distribution)
+- [ ] CPU utilization and throughput metrics
 
 ---
 

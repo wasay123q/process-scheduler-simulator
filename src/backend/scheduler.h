@@ -17,6 +17,14 @@ typedef enum {
     STATE_TERMINATED
 } ProcessState;
 
+// MLFQ (Multi-Level Feedback Queue) Data
+// Used to track queue level, aging, and quantum usage
+typedef struct {
+    int queue_level;        // 0=High, 1=Medium, 2=Low
+    int time_in_queue;      // For aging mechanism (prevent starvation)
+    int quantum_used;       // Track quantum consumption in current burst
+} MLFQData;
+
 // Process Control Block (PCB) - The Core Structure
 // This holds all the data for a single process [cite: 12, 14]
 typedef struct {
@@ -29,6 +37,7 @@ typedef struct {
     int turnaround_time;    // Metric: Completion Time - Arrival Time
     int completion_time;    // Time when execution finished
     ProcessState state;     // Current state
+    MLFQData *mlfq_data;    // MLFQ-specific data (NULL if not using MLFQ)
 } Process;
 
 // System State - Shared Data Structure (Critical Section)

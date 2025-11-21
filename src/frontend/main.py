@@ -34,12 +34,15 @@ P_COLORS = [
 
 def main(page: ft.Page):
     # --- 1. Page Setup ---
-    page.title = "Process Scheduler - Material Design"
+    page.title = "Process Scheduler Simulator"
     page.bgcolor = COLOR_BG
     page.theme_mode = ft.ThemeMode.LIGHT
     page.padding = 20
     page.window_width = 1450
     page.window_height = 920
+    page.window_resizable = True
+    page.window_maximizable = True
+    page.window_minimizable = True
     page.fonts = {
         "Roboto": "https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
     }
@@ -105,8 +108,10 @@ def main(page: ft.Page):
         options=[
             ft.dropdown.Option("FCFS", "First Come First Served"), 
             ft.dropdown.Option("SJF", "Shortest Job First"),
+            ft.dropdown.Option("SRTN", "Shortest Remaining Time Next"),
             ft.dropdown.Option("Priority", "Priority Scheduling"), 
             ft.dropdown.Option("RR", "Round Robin"),
+            ft.dropdown.Option("MLFQ", "Multi-Level Feedback Queue"),
         ],
         value="FCFS", 
         border_color=COLOR_OUTLINE,
@@ -135,8 +140,63 @@ def main(page: ft.Page):
         keyboard_type=ft.KeyboardType.NUMBER,
     )
 
+    mlfq_info = ft.Container(
+        visible=False,
+        padding=ft.padding.all(12),
+        border_radius=8,
+        bgcolor=ft.Colors.with_opacity(0.05, COLOR_PRIMARY),
+        border=ft.border.all(1, ft.Colors.with_opacity(0.3, COLOR_PRIMARY)),
+        width=300,
+        content=ft.Column([
+            ft.Row([
+                ft.Icon(ft.Icons.INFO_OUTLINE, size=16, color=COLOR_PRIMARY),
+                ft.Text("MLFQ Queues", size=12, weight=ft.FontWeight.W_600, color=COLOR_PRIMARY),
+            ], spacing=6),
+            ft.Container(height=6),
+            ft.Text("Q0: Quantum=2 | Q1: Quantum=4 | Q2: Quantum=8", 
+                   size=10, color=COLOR_ON_SURFACE),
+            ft.Text("New processes → Q0 (High Priority)", 
+                   size=10, color=COLOR_SECONDARY, italic=True),
+        ], spacing=2, tight=True),
+    )
+
     def on_algo_change(e):
+        is_mlfq = (algo_dropdown.value == "MLFQ")
         quantum_field.visible = (algo_dropdown.value == "RR")
+        mlfq_info.visible = is_mlfq
+        queue_column.visible = is_mlfq
+        
+        # Rebuild table rows to match column visibility
+        if len(proc_table.rows) > 0:
+            old_rows = proc_table.rows.copy()
+            proc_table.rows.clear()
+            
+            for i, (pid, arr, bst, pri) in enumerate(processes):
+                cells = [
+                    ft.DataCell(ft.Text(str(pid), size=14, weight=ft.FontWeight.W_700, color=COLOR_PRIMARY)),
+                    ft.DataCell(ft.Text(str(arr), size=14, weight=ft.FontWeight.W_500, color=COLOR_ON_SURFACE)),
+                    ft.DataCell(ft.Text(str(bst), size=14, weight=ft.FontWeight.W_500, color=COLOR_ON_SURFACE)),
+                    ft.DataCell(ft.Text(str(pri), size=14, weight=ft.FontWeight.W_500, color=COLOR_ON_SURFACE)),
+                ]
+                
+                # Add Queue cell only if MLFQ
+                if is_mlfq:
+                    cells.append(ft.DataCell(ft.Text("—", size=14, weight=ft.FontWeight.W_400, color=COLOR_SECONDARY)))
+                
+                # Add metric cells
+                cells.extend([
+                    ft.DataCell(ft.Text("—", size=14, weight=ft.FontWeight.W_400, color=COLOR_SECONDARY)),
+                    ft.DataCell(ft.Text("—", size=14, weight=ft.FontWeight.W_400, color=COLOR_SECONDARY)),
+                    ft.DataCell(ft.Text("—", size=14, weight=ft.FontWeight.W_400, color=COLOR_SECONDARY)),
+                ])
+                
+                proc_table.rows.append(
+                    ft.DataRow(
+                        cells=cells,
+                        color=COLOR_SURFACE_VARIANT if i % 2 == 0 else COLOR_SURFACE,
+                    )
+                )
+        
         page.update()
     algo_dropdown.on_change = on_algo_change
 
@@ -176,12 +236,18 @@ def main(page: ft.Page):
     )
 
     # Process Table with Metrics
+    queue_column = ft.DataColumn(
+        ft.Text("Queue", size=14, weight=ft.FontWeight.W_700, color=COLOR_PRIMARY),
+        visible=False  # Hidden by default, shown only for MLFQ
+    )
+    
     proc_table = ft.DataTable(
         columns=[
             ft.DataColumn(ft.Text("PID", size=14, weight=ft.FontWeight.W_700, color=COLOR_PRIMARY)),
             ft.DataColumn(ft.Text("Arrival", size=14, weight=ft.FontWeight.W_700, color=COLOR_ON_SURFACE)),
             ft.DataColumn(ft.Text("Burst", size=14, weight=ft.FontWeight.W_700, color=COLOR_ON_SURFACE)),
             ft.DataColumn(ft.Text("Priority", size=14, weight=ft.FontWeight.W_700, color=COLOR_ON_SURFACE)),
+            queue_column,
             ft.DataColumn(ft.Text("CT", size=14, weight=ft.FontWeight.W_700, color=COLOR_SUCCESS)), 
             ft.DataColumn(ft.Text("TAT", size=14, weight=ft.FontWeight.W_700, color=COLOR_WARNING)), 
             ft.DataColumn(ft.Text("WT", size=14, weight=ft.FontWeight.W_700, color=COLOR_ERROR)),       
@@ -204,24 +270,42 @@ def main(page: ft.Page):
             pri = int(input_pri.value)
             processes.append((pid, arr, bst, pri))
             
-            # Initialize row with "—"
+            # Build cells list based on whether MLFQ is selected
+            cells = [
+                ft.DataCell(ft.Text(str(pid), size=14, weight=ft.FontWeight.W_700, color=COLOR_PRIMARY)),
+                ft.DataCell(ft.Text(str(arr), size=14, weight=ft.FontWeight.W_500, color=COLOR_ON_SURFACE)),
+                ft.DataCell(ft.Text(str(bst), size=14, weight=ft.FontWeight.W_500, color=COLOR_ON_SURFACE)),
+                ft.DataCell(ft.Text(str(pri), size=14, weight=ft.FontWeight.W_500, color=COLOR_ON_SURFACE)),
+            ]
+            
+            # Add Queue cell only if MLFQ is selected
+            if algo_dropdown.value == "MLFQ":
+                cells.append(ft.DataCell(ft.Text("—", size=14, weight=ft.FontWeight.W_400, color=COLOR_SECONDARY)))
+            
+            # Add metric cells
+            cells.extend([
+                ft.DataCell(ft.Text("—", size=14, weight=ft.FontWeight.W_400, color=COLOR_SECONDARY)),  # CT
+                ft.DataCell(ft.Text("—", size=14, weight=ft.FontWeight.W_400, color=COLOR_SECONDARY)),  # TAT
+                ft.DataCell(ft.Text("—", size=14, weight=ft.FontWeight.W_400, color=COLOR_SECONDARY)),  # WT
+            ])
+            
             proc_table.rows.append(
                 ft.DataRow(
-                    cells=[
-                        ft.DataCell(ft.Text(str(pid), size=14, weight=ft.FontWeight.W_700, color=COLOR_PRIMARY)),
-                        ft.DataCell(ft.Text(str(arr), size=14, weight=ft.FontWeight.W_500, color=COLOR_ON_SURFACE)),
-                        ft.DataCell(ft.Text(str(bst), size=14, weight=ft.FontWeight.W_500, color=COLOR_ON_SURFACE)),
-                        ft.DataCell(ft.Text(str(pri), size=14, weight=ft.FontWeight.W_500, color=COLOR_ON_SURFACE)),
-                        ft.DataCell(ft.Text("—", size=14, weight=ft.FontWeight.W_400, color=COLOR_SECONDARY)), 
-                        ft.DataCell(ft.Text("—", size=14, weight=ft.FontWeight.W_400, color=COLOR_SECONDARY)), 
-                        ft.DataCell(ft.Text("—", size=14, weight=ft.FontWeight.W_400, color=COLOR_SECONDARY)), 
-                    ],
+                    cells=cells,
                     color=COLOR_SURFACE_VARIANT if len(proc_table.rows) % 2 == 0 else COLOR_SURFACE,
                 )
             )
             input_pid.value = str(pid + 1)
             page.update()
         except ValueError: pass
+
+    def clear_queue(e):
+        processes.clear()
+        proc_table.rows.clear()
+        timeline_row.controls.clear()
+        ruler_row.controls.clear()
+        input_pid.value = "1"
+        page.update()
 
     btn_add = ft.ElevatedButton(
         "Add Process", 
@@ -236,6 +320,20 @@ def main(page: ft.Page):
             elevation=3,
         ),
         on_click=add_process, 
+        width=300,
+    )
+
+    btn_clear = ft.OutlinedButton(
+        "Clear Queue",
+        icon=ft.Icons.DELETE_SWEEP_OUTLINED,
+        style=ft.ButtonStyle(
+            color=COLOR_ERROR,
+            side=ft.BorderSide(2, COLOR_ERROR),
+            shape=ft.RoundedRectangleBorder(radius=10),
+            padding=ft.padding.symmetric(horizontal=24, vertical=12),
+            text_style=ft.TextStyle(size=14, weight=ft.FontWeight.W_600),
+        ),
+        on_click=clear_queue,
         width=300,
     )
 
@@ -289,20 +387,42 @@ def main(page: ft.Page):
         running_pid = -1
         
         # Update Table Metrics
+        is_mlfq = (algo_dropdown.value == "MLFQ")
+        
         for i, p in enumerate(procs):
+            row = proc_table.rows[i]
+            
+            # Determine cell indices based on whether Queue column exists
+            if is_mlfq:
+                queue_idx = 4
+                ct_idx = 5
+                tat_idx = 6
+                wt_idx = 7
+            else:
+                ct_idx = 4
+                tat_idx = 5
+                wt_idx = 6
+            
+            # Update Queue Level (MLFQ only)
+            if is_mlfq and p.get('queue', -1) >= 0:
+                queue_val = f"Q{p['queue']}"
+                queue_color = COLOR_SUCCESS if p['queue'] == 0 else (COLOR_WARNING if p['queue'] == 1 else COLOR_ERROR)
+                row.cells[queue_idx].content.value = queue_val
+                row.cells[queue_idx].content.color = queue_color
+                row.cells[queue_idx].content.weight = ft.FontWeight.W_700
+            
             if p['ct'] > 0:
-                row = proc_table.rows[i]
-                row.cells[4].content.value = str(p['ct'])
-                row.cells[4].content.color = COLOR_SUCCESS
-                row.cells[4].content.weight = ft.FontWeight.W_600
+                row.cells[ct_idx].content.value = str(p['ct'])
+                row.cells[ct_idx].content.color = COLOR_SUCCESS
+                row.cells[ct_idx].content.weight = ft.FontWeight.W_600
                 
-                row.cells[5].content.value = str(p['tat'])
-                row.cells[5].content.color = COLOR_WARNING
-                row.cells[5].content.weight = ft.FontWeight.W_600
+                row.cells[tat_idx].content.value = str(p['tat'])
+                row.cells[tat_idx].content.color = COLOR_WARNING
+                row.cells[tat_idx].content.weight = ft.FontWeight.W_600
                 
-                row.cells[6].content.value = str(p['wt'])
-                row.cells[6].content.color = COLOR_ERROR
-                row.cells[6].content.weight = ft.FontWeight.W_600
+                row.cells[wt_idx].content.value = str(p['wt'])
+                row.cells[wt_idx].content.color = COLOR_ERROR
+                row.cells[wt_idx].content.weight = ft.FontWeight.W_600
 
             if p['state'] == 1: # RUNNING
                 running_pid = p['pid']
@@ -457,7 +577,8 @@ def main(page: ft.Page):
             ft.Container(height=12),
             algo_dropdown, 
             ft.Container(height=12),
-            quantum_field, 
+            quantum_field,
+            mlfq_info,
             ft.Container(height=24),
             ft.Text(
                 "Add Process", 
@@ -471,7 +592,9 @@ def main(page: ft.Page):
             ft.Container(height=12),
             ft.Row([input_bst, input_pri], spacing=16),
             ft.Container(height=16),
-            btn_add, 
+            btn_add,
+            ft.Container(height=10),
+            btn_clear,
             ft.Container(expand=True),
             ft.Divider(height=1, thickness=2, color=COLOR_OUTLINE), 
             ft.Container(height=16),

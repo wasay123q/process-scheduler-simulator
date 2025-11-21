@@ -46,6 +46,19 @@ int select_process(SystemState *sys, char *algorithm, int quantum) {
             }
         }
     }
+    // --- SRTN (Shortest Remaining Time Next - Preemptive SJF) ---
+    else if (strcmp(algorithm, "SRTN") == 0) {
+        int min_remaining = 999999;
+        for (int i = 0; i < sys->process_count; i++) {
+            Process *p = sys->processes[i];
+            if (p->state != STATE_TERMINATED && p->arrival_time <= sys->current_time) {
+                if (p->remaining_time < min_remaining) {
+                    min_remaining = p->remaining_time;
+                    selected_idx = i;
+                }
+            }
+        }
+    }
     // --- RR ---
     else if (strcmp(algorithm, "RR") == 0) {
         if (sys->current_time == 0) {
@@ -72,6 +85,90 @@ int select_process(SystemState *sys, char *algorithm, int quantum) {
             count++;
         }
         return -1; 
+    }
+    // --- MLFQ (Multi-Level Feedback Queue) ---
+    else if (strcmp(algorithm, "MLFQ") == 0) {
+        static int mlfq_quantums[3] = {2, 4, 8};  // Queue quantums: Q0=2, Q1=4, Q2=8
+        static int last_pid = -1;
+        static int quantum_counter = 0;
+        
+        // Initialize MLFQ data for all processes on first run
+        if (sys->current_time == 0) {
+            last_pid = -1;
+            quantum_counter = 0;
+        }
+        
+        for (int i = 0; i < sys->process_count; i++) {
+            Process *p = sys->processes[i];
+            if (p->mlfq_data == NULL && p->arrival_time <= sys->current_time) {
+                p->mlfq_data = (MLFQData *)malloc(sizeof(MLFQData));
+                p->mlfq_data->queue_level = 0;      // Start in highest priority queue
+                p->mlfq_data->time_in_queue = 0;
+                p->mlfq_data->quantum_used = 0;
+            }
+        }
+        
+        // Check if current process should continue or be preempted
+        if (last_pid != -1) {
+            for (int i = 0; i < sys->process_count; i++) {
+                if (sys->processes[i]->pid == last_pid) {
+                    Process *p = sys->processes[i];
+                    if (p->state != STATE_TERMINATED && p->mlfq_data != NULL) {
+                        int queue = p->mlfq_data->queue_level;
+                        quantum_counter++;
+                        
+                        // Check if quantum exhausted
+                        if (quantum_counter >= mlfq_quantums[queue]) {
+                            // Demote to lower queue if not already at lowest
+                            if (queue < 2) {
+                                p->mlfq_data->queue_level++;
+                            }
+                            p->mlfq_data->quantum_used = 0;
+                            quantum_counter = 0;
+                            last_pid = -1;
+                        } else {
+                            // Continue current process
+                            selected_idx = i;
+                            return selected_idx;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+        
+        // Select process from highest priority queue with ready processes
+        for (int queue = 0; queue <= 2; queue++) {
+            for (int i = 0; i < sys->process_count; i++) {
+                Process *p = sys->processes[i];
+                if (p->state != STATE_TERMINATED && 
+                    p->arrival_time <= sys->current_time &&
+                    p->mlfq_data != NULL &&
+                    p->mlfq_data->queue_level == queue) {
+                    
+                    selected_idx = i;
+                    last_pid = p->pid;
+                    quantum_counter = 1;
+                    p->mlfq_data->time_in_queue = 0;  // Reset waiting time
+                    return selected_idx;
+                }
+            }
+        }
+        
+        // Aging mechanism: boost processes waiting too long (prevent starvation)
+        for (int i = 0; i < sys->process_count; i++) {
+            Process *p = sys->processes[i];
+            if (p->state == STATE_READY && p->mlfq_data != NULL && p->arrival_time <= sys->current_time) {
+                p->mlfq_data->time_in_queue++;
+                // If waited > 10 time units, promote to higher queue
+                if (p->mlfq_data->time_in_queue > 10 && p->mlfq_data->queue_level > 0) {
+                    p->mlfq_data->queue_level--;
+                    p->mlfq_data->time_in_queue = 0;
+                }
+            }
+        }
+        
+        return -1;  // No process ready
     }
     return selected_idx;
 }

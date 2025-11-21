@@ -42,10 +42,11 @@ void send_update_to_ui(SystemState *sys) {
         char p_buff[128];
         Process *p = sys->processes[i];
         
-        // ADDED: ct (Completion), tat (Turnaround), wt (Waiting)
-        sprintf(p_buff, "{\"pid\": %d, \"state\": %d, \"remaining\": %d, \"ct\": %d, \"tat\": %d, \"wt\": %d}%s", 
+        // ADDED: ct (Completion), tat (Turnaround), wt (Waiting), queue (MLFQ)
+        int queue_level = (p->mlfq_data != NULL) ? p->mlfq_data->queue_level : -1;
+        sprintf(p_buff, "{\"pid\": %d, \"state\": %d, \"remaining\": %d, \"ct\": %d, \"tat\": %d, \"wt\": %d, \"queue\": %d}%s", 
                 p->pid, p->state, p->remaining_time, 
-                p->completion_time, p->turnaround_time, p->waiting_time,
+                p->completion_time, p->turnaround_time, p->waiting_time, queue_level,
                 (i < sys->process_count - 1) ? "," : "");
         strcat(process_list, p_buff);
     }
