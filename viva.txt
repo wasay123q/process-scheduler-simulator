@@ -1,0 +1,125 @@
+Part 2: The Viva Preparation Guide (Backend Deep Dive)
+This section explains exactly what is happening in your code so you can answer any technical question.
+
+1. The Architecture (The "Big Picture")
+What is it? A Client-Server architecture running on the same machine.
+
+The Kernel (Client): The C program. It does all the thinking. It has the data.
+
+The Monitor (Server): The Python program. It just listens. It has the screen.
+
+The Pipe (IPC): A Unix Domain Socket file at /tmp/scheduler_socket. It's like a direct telephone line between the two programs.
+
+2. File-by-File Breakdown
+A. src/backend/scheduler.h (The Blueprint)
+
+Role: Defines the data structures.
+
+Key Concept: struct Process (The PCB). It holds pid, burst_time, remaining_time, state, etc.
+
+Key Concept: struct SystemState. This holds the array of processes and the Mutex (pthread_mutex_t lock).
+
+Viva Q: "Where do you store process info?"
+
+Answer: "In the Process struct defined in the header file. This acts as our PCB."
+
+B. src/backend/main.c (The Entry Point)
+
+Role: Sets up the simulation.
+
+Flow:
+
+Reads command line args (Algorithm name, Quantum, Process Count).
+
+Calls init_system() to prepare memory and the mutex.
+
+Calls connect_to_ui() to try and find the Python server.
+
+Loops scanf() to read user input for processes.
+
+Calls run_scheduler() to start the engine.
+
+Viva Q: "How do you handle input?"
+
+Answer: "We use standard I/O (scanf) so we can pipe data in from a file or type it manually in the terminal."
+
+C. src/backend/algorithms.c (The Brain)
+
+Role: Decides which process runs next.
+
+Key Function: select_process(). It loops through the ready queue and picks a process based on the algorithm (e.g., smallest burst for SJF).
+
+Key Function: run_scheduler(). The main simulation loop.
+
+Lock: pthread_mutex_lock (Stop anyone else from touching memory).
+
+Select: Call select_process.
+
+Execute: Decrement remaining_time.
+
+Update: Send JSON to UI.
+
+Unlock: pthread_mutex_unlock.
+
+Sleep: usleep(100000) (Wait 0.1s so humans can see it).
+
+Viva Q: "How did you implement Round Robin?"
+
+Answer: "I used a static variable rr_quantum_timer inside the selection function. It counts up every tick. If it hits the quantum limit, I force the selection logic to pick the next available process in the list, simulating a context switch."
+
+D. src/backend/ipc.c (The Messenger)
+
+Role: Talks to Python.
+
+Key Concept: Serialization. It takes the C structs (binary data) and converts them into a text string (JSON) like {"pid": 1, "state": 1...}.
+
+System Call: socket(AF_UNIX, ...) creates the endpoint. connect() dials the server. write() sends the data.
+
+Viva Q: "Why Unix Sockets?"
+
+Answer: "They are faster and more efficient than TCP/IP sockets because they work entirely within the OS kernel memory, without the overhead of network protocols."
+
+E. src/backend/process.c (The Manager)
+
+Role: Memory helper.
+
+Key Concept: malloc. We allocate memory for each new process dynamically.
+
+Viva Q: "How do you ensure thread safety when adding processes?"
+
+Answer: "We lock the mutex before adding a new pointer to the sys->processes array."
+
+3. The Program Flow (Step-by-Step)
+Start: Python starts first. It creates the socket file and waits (listens).
+
+Launch: Python launches the C program as a "subprocess".
+
+Connect: C program starts, finds the socket file, and connects.
+
+Handshake: Python sends the input data (PIDs, Bursts) to C's stdin.
+
+Simulation Loop (C Side):
+
+Time t=0.
+
+Lock Memory.
+
+Check Algorithm -> Pick P1.
+
+P1 runs (Bursts - 1).
+
+Send JSON: "Time 0: P1 is Running".
+
+Unlock Memory.
+
+Sleep 0.1s.
+
+Visualization (Python Side):
+
+Receive JSON.
+
+Draw Green Block for P1.
+
+Update Table.
+
+End: All processes finish. C sends final report. C exits. Python sees connection close and shows "COMPLETED".

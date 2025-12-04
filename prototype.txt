@@ -1,0 +1,48 @@
+OS PROJECT PROTOTYPE REPORT
+---------------------------
+Date: 10 December 2025
+Team Lead: Abdul Wasay Sial
+
+1. PROTOTYPE SCOPE
+   This submission represents the **Functional Prototype** phase of the Process Scheduling Visualizer.
+   The primary goal is to demonstrate the successful implementation of the **Scheduler Kernel (Backend)** and the **Inter-Process Communication (IPC)** mechanism. The User Interface (UI) is included as a preliminary monitor for verifying the kernel's state.
+
+2. CORE CONCEPTS IMPLEMENTED (Prototype Requirements)
+
+   A. PROCESS MANAGEMENT
+      * **Mechanism:** A `Process Control Block (PCB)` structure is defined in C to manage PID, State, Burst Time, and Priority.
+      * **Status:** Working. Processes are dynamically allocated and managed in memory.
+
+   B. CONCURRENCY & SYNCHRONIZATION
+      * **Mechanism:** The prototype uses `pthreads` for the simulation loop.
+      * **Locking:** A `pthread_mutex_t` lock protects the shared `SystemState` data structure, preventing race conditions during state updates.
+      * **Status:** Working. Thread-safe execution is verified.
+
+   C. INTER-PROCESS COMMUNICATION (IPC)
+      * **Mechanism:** Unix Domain Sockets (`AF_UNIX`) transmit data.
+      * **Implementation:** The C kernel (Client) serializes process data into JSON and streams it to the Python monitor (Server).
+      * **Status:** Working. Real-time data transfer is active.
+
+   D. SCHEDULING ALGORITHMS
+      * **Implemented Logic:**
+          1.  FCFS (First-Come, First-Served)
+          2.  SJF (Shortest Job First - Non-Preemptive)
+          3.  Priority Scheduling
+          4.  Round Robin (with configurable Time Quantum)
+      * **Status:** Logic is implemented and verified against standard test cases.
+
+3. FUTURE WORK (Towards Final Product)
+   * Detailed performance analysis reports and exportable logs.
+   * Advanced error handling for edge cases in network communication.
+   * Refinement of the UI/UX for final presentation standards.
+
+4. HOW TO VERIFY THE PROTOTYPE
+
+   1.  **Compile the Kernel:**
+       Run `make` in the root directory. This confirms the C backend compiles with `pthread` support.
+
+   2.  **Run the Backend Manually (No UI Required):**
+       Run `./bin/scheduler FCFS 2 3`.
+       Enter inputs: `1 0 5 1` (PID, Arrival, Burst, Priority).
+       *Result:* The terminal will print the simulation logs and calculated metrics.
+
