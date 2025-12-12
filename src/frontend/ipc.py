@@ -3,64 +3,52 @@ import json
 import os
 import threading
 
-SOCKET_PATH = "/tmp/scheduler_socket"
-
 class IPCServer:
-    def __init__(self, on_data_received, on_disconnected):
+    def __init__(self, socket_path, on_data_received, on_disconnected):
+        self.socket_path = socket_path
         self.sock = None
         self.conn = None
         self.running = False
         self.on_data_received = on_data_received
-        self.on_disconnected = on_disconnected # New Callback
+        self.on_disconnected = on_disconnected
 
     def start(self):
-        if os.path.exists(SOCKET_PATH):
-            os.remove(SOCKET_PATH)
+        if os.path.exists(self.socket_path):
+            os.remove(self.socket_path)
 
         try:
             self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            self.sock.bind(SOCKET_PATH)
+            self.sock.bind(self.socket_path)
             self.sock.listen(1)
             threading.Thread(target=self._accept_connection, daemon=True).start()
             return True
-        except Exception as e:
-            print(f"IPC Init Error: {e}")
+        except Exception:
             return False
 
     def _accept_connection(self):
-        print("Waiting for C process...")
         try:
             self.conn, addr = self.sock.accept()
-            print("C Process Connected!")
             self.running = True
             self._listen_loop()
-        except Exception as e:
-            print(f"Connection Error: {e}")
+        except: pass
 
     def _listen_loop(self):
         buffer = ""
         while self.running:
             try:
                 data = self.conn.recv(4096).decode('utf-8')
-                if not data: 
-                    break # Connection closed by C backend
-                
+                if not data: break
                 buffer += data
                 while "\n" in buffer:
                     line, buffer = buffer.split("\n", 1)
                     if line.strip():
                         try:
-                            json_data = json.loads(line)
-                            self.on_data_received(json_data)
-                        except json.JSONDecodeError:
-                            pass
-            except:
-                break
+                            self.on_data_received(json.loads(line))
+                        except: pass
+            except: break
         
-        # Connection lost/finished
-        print("Simulation Finished (Connection Closed)")
         self.cleanup()
-        self.on_disconnected() # Notify UI
+        self.on_disconnected()
 
     def cleanup(self):
         self.running = False
@@ -70,5 +58,5 @@ class IPCServer:
         if self.sock: 
             try: self.sock.close()
             except: pass
-        if os.path.exists(SOCKET_PATH):
-            os.remove(SOCKET_PATH)
+        if os.path.exists(self.socket_path):
+            os.remove(self.socket_path)

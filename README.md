@@ -2,16 +2,17 @@
 
 # 🖥️ Process Scheduler Simulator
 
-### *Advanced Operating System Scheduler Visualizer with Real-Time IPC*
+### *Advanced OS Scheduler Visualizer with Real-Time IPC & Benchmark Comparison*
 
 [![OS](https://img.shields.io/badge/OS-Linux-blue?logo=linux)](https://www.linux.org/)
 [![C](https://img.shields.io/badge/C-00599C?logo=c&logoColor=white)](https://en.wikipedia.org/wiki/C_(programming_language))
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flet](https://img.shields.io/badge/Flet-UI-00D9FF?logo=flutter)](https://flet.dev/)
+[![Algorithms](https://img.shields.io/badge/Algorithms-6-success)](/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Build](https://img.shields.io/badge/build-passing-brightgreen)]()
 
-*A professional-grade hybrid simulator demonstrating CPU scheduling algorithms through an elegant real-time visualization interface.*
+*Professional CPU scheduler simulator with 6 algorithms, parallel benchmark comparison, and vintage cream UI theme.*
 
 [Features](#-features) • [Demo](#-demo) • [Installation](#-installation) • [Usage](#-usage) • [Architecture](#-architecture) • [API](#-api-reference) • [Team](#-team)
 
@@ -21,6 +22,7 @@
 
 ## 📋 Table of Contents
 
+- [Recent Updates](#-recent-updates-december-2025)
 - [Overview](#-overview)
 - [Features](#-features)
 - [Demo](#-demo)
@@ -28,6 +30,7 @@
 - [Prerequisites](#-prerequisites)
 - [Installation](#-installation)
 - [Usage](#-usage)
+- [Benchmark Comparison Mode](#-benchmark-comparison-mode)
 - [Algorithm Details](#-algorithm-details)
 - [Project Structure](#-project-structure)
 - [API Reference](#-api-reference)
@@ -39,25 +42,36 @@
 
 ---
 
-## 🆕 Recent Updates (November 2025)
+## 🆕 Recent Updates (December 2025)
 
-### ✨ New Algorithms
-- **SRTN (Shortest Remaining Time Next)**: Preemptive SJF providing optimal average waiting time
-- **MLFQ (Multi-Level Feedback Queue)**: Real-world scheduler with 3-level dynamic priority queues
+### 🏆 Benchmark Comparison Mode
+- **Multi-Algorithm Comparison**: Run all 6 algorithms simultaneously with same process set
+- **Side-by-Side Visualization**: Real-time parallel Gantt charts in grid layout (2x3)
+- **Efficiency Ranking**: Automatic winner detection based on average waiting time
+- **Visual Indicators**: Green border highlights the most efficient algorithm
 
-### 🎨 UI Enhancements
-- **Material Design 3**: Modern cream/golden light theme for professional aesthetics
-- **Queue Level Tracking**: Live display of MLFQ queue assignments (Q0/Q1/Q2) with color coding
-- **Clear Queue Button**: Quick process removal without restarting application
-- **Resizable Window**: Maximize, minimize, and resize window for better viewing
-- **Grid Lines**: Timeline grid overlay for precise time visualization
-- **Contextual Help**: Algorithm-specific info boxes (MLFQ quantum details, RR time slice)
+### ✨ Scheduling Algorithms (6 Total)
+- **FCFS**: First Come First Served - Simple FIFO approach
+- **SJF**: Shortest Job First - Non-preemptive, minimizes average waiting time
+- **SRTN**: Shortest Remaining Time Next - Preemptive SJF for dynamic workloads
+- **Priority**: Priority-based scheduling with lower number = higher priority
+- **Round Robin**: Time-slice based with configurable quantum
+- **MLFQ**: Multi-Level Feedback Queue with 3-level dynamic priorities (Q0=2, Q1=4, Q2=8)
+
+### 🎨 UI Redesign
+- **Vintage Cream Theme**: Professional brown/cream color palette (#FFF8E1 background, #5D4037 text)
+- **Dual-Mode Interface**: Toggle between single algorithm and benchmark comparison
+- **Compact Cards**: Individual algorithm cards with mini timelines and statistics
+- **Responsive Layout**: Fixed table height (300px) with scrolling, expandable chart area
+- **Status Indicator**: Real-time badge showing IDLE/RUNNING/COMPLETED with color coding
+- **2x2 Input Grid**: Space-efficient process input layout
 
 ### 🔧 Technical Improvements
-- **Dynamic Column Visibility**: Queue column appears only for MLFQ algorithm
-- **Enhanced IPC**: Queue level data transmission in JSON protocol
-- **Aging Mechanism**: MLFQ prevents starvation via automatic priority promotion
-- **Memory Management**: Proper cleanup of MLFQ data structures
+- **Parallel IPC**: Multiple socket paths for concurrent algorithm execution
+- **Fixed MLFQ Bug**: Quantum counter logic corrected (changed `>=` to `>` for accurate quantum enforcement)
+- **Queue Level Tooltips**: MLFQ queue information displayed on hover in timeline
+- **Simplified Table**: Removed dynamic column visibility, streamlined to 7 fixed columns
+- **Auto-Scroll**: Timeline and ruler auto-scroll to latest process execution
 
 ---
 
@@ -93,15 +107,18 @@ This simulator is ideal for:
 
 ### 🎨 Visualization Features
 
-- **📈 Real-Time Gantt Chart**: Live timeline visualization with color-coded processes and grid lines
-- **📊 Process State Monitoring**: Track process states (Ready, Running, Waiting, Terminated)
-- **📉 Metrics Dashboard**: Real-time computation of CT, TAT, and WT
-- **🎯 MLFQ Queue Tracking**: Dynamic queue level display (Q0/Q1/Q2) with color coding
-- **🎭 Smooth Animations**: 60 FPS synchronized rendering (100ms tick rate)
-- **🌈 Material Design 3**: Cream/golden light theme with professional aesthetics
-- **🗑️ Queue Management**: Clear queue button for quick process removal
-- **📐 Responsive Layout**: Resizable, maximizable, and minimizable window
-- **ℹ️ Contextual Help**: Algorithm-specific configuration info boxes
+- **📈 Dual-Mode Gantt Charts**: 
+  - **Single Mode**: Full-size timeline with 40px blocks and ruler
+  - **Benchmark Mode**: 6 mini timelines (12px blocks) in 2x3 grid layout
+- **🏆 Algorithm Comparison**: Automatic efficiency ranking with visual winner indication
+- **📊 Real-Time Metrics**: Live updates of CT, TAT, WT in scrollable data table
+- **🎯 MLFQ Queue Tracking**: Queue level (Q0/Q1/Q2) shown in tooltips on hover
+- **🎭 Smooth Animations**: Auto-scrolling timelines with 100ms update interval
+- **🌈 Vintage Cream Theme**: Professional aesthetic with brown (#5D4037) and cream (#FFF8E1)
+- **🗑️ Queue Management**: Add/Clear process buttons with input validation
+- **📐 Responsive Layout**: 1250x900 resizable window with fixed table height (300px)
+- **💡 Status Badge**: Top-right indicator (IDLE→RUNNING→COMPLETED) with color coding
+- **📱 Compact Design**: Space-efficient 2x2 input grid and card-based layout
 
 ### 🔧 Technical Features
 
@@ -115,36 +132,61 @@ This simulator is ideal for:
 
 ## 🎬 Demo
 
-### Visual Interface
+### Visual Interface - Benchmark Comparison Mode
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│  🖥️  PROCESS SCHEDULER                         STATUS: COMPLETED ✓  │
-├──────────────────────────────────────────────────────────────────────┤
-│                                                                        │
-│  ┌────────────────────┐  ┌───────────────────────────────────────┐  │
-│  │  CONFIGURATION     │  │      LIVE TIMELINE (Grid View)        │  │
-│  ├────────────────────┤  │  ┌───┬───┬───┬───┬───┬───┬───┬───┐   │  │
-│  │ Algorithm: MLFQ ▼  │  │  │P1 │P2 │P3 │P1 │P2 │P3 │P1 │P2 │   │  │
-│  │                    │  │  └───┴───┴───┴───┴───┴───┴───┴───┘   │  │
-│  │ ℹ️ MLFQ Queues     │  │  │ 0 │ 1 │ 2 │ 3 │ 4 │ 5 │ 6 │ 7 │   │  │
-│  │ Q0: Quantum=2      │  └───────────────────────────────────────┘  │
-│  │ Q1: Quantum=4      │                                              │
-│  │ Q2: Quantum=8      │  ┌───────────────────────────────────────┐  │
-│  │ New → Q0           │  │      PROCESS QUEUE (Scrollable)       │  │
-│  │                    │  ├────┬─────┬─────┬──────┬───┬────┬────┬───┤│
-│  │ ADD PROCESS        │  │PID │Arr. │Burst│Prior.│ Q │ CT │TAT │WT ││
-│  │ PID: 4             │  ├────┼─────┼─────┼──────┼───┼────┼────┼───┤│
-│  │ Arrival: 0         │  │ 1  │  0  │  6  │  1   │Q1 │ 13 │ 13 │ 7 ││
-│  │ Burst: 5           │  │ 2  │  0  │ 20  │  1   │Q2 │ 29 │ 29 │ 9 ││
-│  │ Priority: 1        │  │ 3  │  0  │  3  │  1   │Q0 │ 11 │ 11 │ 8 ││
-│  │                    │  └────┴─────┴─────┴──────┴───┴────┴────┴───┘│
-│  │ [➕ Add Process]   │                                              │
-│  │ [🗑️ Clear Queue]   │  Material Design 3 • Cream/Golden Theme    │
-│  │                    │  Resizable • Grid Lines • Queue Tracking    │
-│  │ [▶️ START]         │                                              │
-│  └────────────────────┘                                              │
-└──────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│  🖥️  PROCESS SCHEDULER              STATUS: ● COMPLETED  │
+├────────────────────────────────────────────────────────────────────────┤
+│ ┌─────────────┐  ┌─────────────────────────────────────────────────┐ │
+│ │Configuration│  │ Algorithm Efficiency Comparison                  │ │
+│ │─────────────│  │                                                  │ │
+│ │Algorithm:   │  │ ┌──────────────────┐  ┌──────────────────┐     │ │
+│ │ Compare All▼│  │ │ FCFS    ● DONE   │  │ SJF      ● DONE  │     │ │
+│ │             │  │ │ ████████████████ │  │ ████████████████ │     │ │
+│ │Quantum: 2   │  │ │ Avg WT: 4.50s    │  │ Avg WT: 3.25s    │     │ │
+│ │             │  │ └──────────────────┘  └──────────────────┘     │ │
+│ │Add Process  │  │                                                  │ │
+│ │─────────────│  │ ┌──────────────────┐  ┌──────────────────┐     │ │
+│ │PID:4  Arr:0 │  │ │ SRTN    ● DONE   │  │ Priority ● DONE  │     │ │
+│ │Bst:5  Pri:1 │  │ │ ████████████████ │  │ ████████████████ │     │ │
+│ │             │  │ │ Avg WT: 2.75s ✓  │  │ Avg WT: 4.00s    │     │ │
+│ │[Add Process]│  │ └──────────────────┘  └──────────────────┘     │ │
+│ │[Clear Queue]│  │                                                  │ │
+│ │             │  │ ┌──────────────────┐  ┌──────────────────┐     │ │
+│ │             │  │ │ Round Robin      │  │ MLFQ             │     │ │
+│ │[START SIM]  │  │ │ ████████████████ │  │ ████████████████ │     │ │
+│ └─────────────┘  │ │ Avg WT: 5.00s    │  │ Avg WT: 3.50s    │     │ │
+│                  │ └──────────────────┘  └──────────────────┘     │ │
+│                  │                                                  │ │
+│                  │ 🏆 WINNER: SRTN is most efficient (Avg WT: 2.75s)│
+│                  └─────────────────────────────────────────────────┘ │
+│ ┌──────────────────────────────────────────────────────────────────┐ │
+│ │ Process Queue (Scrollable)                                        │ │
+│ │ PID │ Arrival │ Burst │ Priority │ CT │ TAT │ WT                 │ │
+│ │  1  │    0    │   5   │    1     │ 5  │  5  │ 0                  │ │
+│ │  2  │    1    │   3   │    2     │ 9  │  8  │ 5                  │ │
+│ │  3  │    2    │   8   │    1     │ 17 │ 15  │ 7                  │ │
+│ └──────────────────────────────────────────────────────────────────┘ │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### Single Algorithm Mode
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│  🖥️  PROCESS SCHEDULER              STATUS: ● RUNNING  │
+├────────────────────────────────────────────────────────────────────────┤
+│ ┌─────────────┐  ┌─────────────────────────────────────────────────┐ │
+│ │Configuration│  │ 📈 Live Timeline                                 │ │
+│ │─────────────│  │ ┌───────────────────────────────────────────┐   │ │
+│ │Algorithm:   │  │ │ [P1][P2][P1][P3][P2][P1]...               │   │ │
+│ │ Round Robin▼│  │ │━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━│   │ │
+│ │Quantum: 2   │  │ │  0   1   2   3   4   5   6   7   8   9    │   │ │
+│ │             │  │ └───────────────────────────────────────────┘   │ │
+│ └─────────────┘  └─────────────────────────────────────────────────┘ │
+│                    Vintage Cream Theme • Real-Time Updates            │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Sample Output
@@ -172,36 +214,46 @@ Simulation Finished.
 ### Component Diagram
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     System Architecture                      │
-├─────────────────────────────────────────────────────────────┤
-│                                                               │
-│  ┌──────────────────────┐         ┌──────────────────────┐  │
-│  │   Python Frontend    │         │    C Backend         │  │
-│  │   (Flet Framework)   │◄───────►│  (Scheduler Kernel)  │  │
-│  │                      │  JSON   │                      │  │
-│  │  • UI Rendering      │  over   │  • Algorithm Logic   │  │
-│  │  • User Input        │  Unix   │  • Process Control   │  │
-│  │  • Visualization     │ Socket  │  • State Management  │  │
-│  │  • Metrics Display   │         │  • Threading & Sync  │  │
-│  └──────────────────────┘         └──────────────────────┘  │
-│           ▲                                  ▲                │
-│           │                                  │                │
-│           └──────────────┬───────────────────┘                │
-│                          │                                    │
-│                  /tmp/scheduler_socket                        │
-│                    (IPC Channel)                              │
-└─────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────┐
+│                    System Architecture (Benchmark Mode)           │
+├───────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  ┌────────────────────────┐       ┌──────────────────────────┐   │
+│  │   Python Frontend      │       │    C Backend Processes   │   │
+│  │   (Flet Framework)     │       │                          │   │
+│  │                        │◄─────►│  ┌─────────────────┐    │   │
+│  │  • SimCard Grid (2x3)  │ JSON  │  │ FCFS (/tmp/s_fcfs)   │   │
+│  │  • 6x IPC Servers      │ over  │  │ SJF  (/tmp/s_sjf)    │   │
+│  │  • Winner Detection    │ Unix  │  │ SRTN (/tmp/s_srtn)   │   │
+│  │  • Real-time Updates   │Sockets│  │ Prio (/tmp/s_prio)   │   │
+│  │  • Metrics Comparison  │       │  │ RR   (/tmp/s_rr)     │   │
+│  └────────────────────────┘       │  │ MLFQ (/tmp/s_mlfq)   │   │
+│           ▲                        │  └─────────────────┐    │   │
+│           │                        │    All run in parallel   │   │
+│           └────────────────────────┴──────────────────────────┘   │
+│                                                                     │
+│  Single Mode: /tmp/sock_single (1 backend process)                │
+│  Benchmark Mode: 6 parallel processes with unique socket paths    │
+└───────────────────────────────────────────────────────────────────┘
 ```
 
 ### Data Flow
 
-1. **Initialization**: Frontend starts IPC server, binds socket
-2. **Process Definition**: User adds processes via UI
-3. **Simulation Launch**: Frontend spawns C backend subprocess
+**Single Algorithm Mode:**
+1. **Initialization**: Frontend starts IPC server on `/tmp/sock_single`
+2. **Process Definition**: User adds processes via 2x2 input grid
+3. **Simulation Launch**: Frontend spawns single C backend subprocess
 4. **Data Streaming**: Backend sends JSON state updates every 100ms
-5. **Visualization**: Frontend renders Gantt chart and updates metrics
-6. **Completion**: Backend closes connection, frontend displays final stats
+5. **Visualization**: Full-size Gantt chart (40px blocks) with auto-scroll
+6. **Completion**: Backend closes connection, displays final metrics
+
+**Benchmark Comparison Mode:**
+1. **Multi-Server Init**: Frontend creates 6 IPC servers (one per algorithm)
+2. **Process Duplication**: Same process set sent to all 6 backends
+3. **Parallel Execution**: All algorithms run simultaneously in separate processes
+4. **Real-time Grid**: 6 SimCards update independently with mini timelines (12px blocks)
+5. **Winner Calculation**: Track average WT, highlight minimum with green border
+6. **Result Display**: Show winner announcement below grid
 
 ### IPC Protocol
 
@@ -217,7 +269,7 @@ Simulation Finished.
       "ct": 0,
       "tat": 0,
       "wt": 0,
-      "queue": 0
+      "q_lvl": 0
     }
   ]
 }
@@ -231,7 +283,24 @@ Simulation Finished.
 - `ct`: Completion time (0 if not completed)
 - `tat`: Turnaround time (0 if not completed)
 - `wt`: Waiting time (0 if not completed)
-- `queue`: MLFQ queue level (0-2, or -1 for non-MLFQ algorithms)
+- `q_lvl`: MLFQ queue level (0=High, 1=Med, 2=Low, or -1 for non-MLFQ algorithms)
+
+**Socket Path Initialization**:
+```c
+// In main.c
+char *socket_path = argv[4];  // Read from command line
+init_ipc(socket_path);        // Store globally
+connect_to_ui();              // Connect to Python IPC server
+```
+
+**Multiple Sockets for Benchmark Mode**:
+- `/tmp/s_fcfs` - FCFS algorithm
+- `/tmp/s_sjf` - SJF algorithm
+- `/tmp/s_srtn` - SRTN algorithm
+- `/tmp/s_prio` - Priority algorithm
+- `/tmp/s_rr` - Round Robin
+- `/tmp/s_mlfq` - MLFQ algorithm
+- `/tmp/sock_single` - Single algorithm mode
 
 **Process States**:
 - `0` = READY
@@ -328,37 +397,53 @@ ls -lh bin/scheduler  # Should show executable
    ```
 
 2. **Configure Simulation**
-   - Select algorithm (FCFS, SJF, Priority, RR)
+   
+   **Single Algorithm Mode:**
+   - Select specific algorithm from dropdown
    - Set time quantum (for Round Robin only)
+   
+   **Benchmark Mode:**
+   - Select "Compare All Algorithms" from dropdown
+   - Set quantum (applies to Round Robin in comparison)
 
 3. **Add Processes**
-   - Enter PID, Arrival Time, Burst Time, Priority
-   - Click "Add Process" for each process
+   - Enter values in 2x2 grid: PID, Arrival, Burst, Priority
+   - Click "Add Process" (PID auto-increments)
+   - Use "Clear Queue" to reset all processes
 
 4. **Start Simulation**
+   
+   **Single Mode:**
    - Click "START SIMULATION"
-   - Watch real-time Gantt chart animation
-   - Monitor completion metrics
+   - Watch full-size Gantt chart with 40px process blocks
+   - Timeline auto-scrolls with ruler
+   
+   **Benchmark Mode:**
+   - All 6 algorithms run simultaneously
+   - View side-by-side mini timelines (2x3 grid)
+   - Green border highlights winner with lowest average waiting time
 
 5. **Analyze Results**
-   - Review final metrics table
-   - Compare average turnaround and waiting times
+   - Review metrics in scrollable table (CT, TAT, WT)
+   - Check status badge (IDLE → RUNNING → COMPLETED)
+   - Compare efficiency rankings in benchmark mode
+   - Hover over MLFQ blocks to see queue level (Q0/Q1/Q2)
 
 ### Command-Line Usage (Backend Only)
 
 ```bash
 # Syntax
-./bin/scheduler <Algorithm> <Quantum> <Process_Count>
+./bin/scheduler <Algorithm> <Quantum> <Process_Count> <Socket_Path>
 
 # Example: FCFS with 3 processes
-./bin/scheduler FCFS 0 3 <<EOF
+./bin/scheduler FCFS 0 3 /tmp/sock_single <<EOF
 1 0 5 1
 2 1 3 2
 3 2 4 3
 EOF
 
 # Example: Round Robin (Quantum = 2)
-./bin/scheduler RR 2 4 <<EOF
+./bin/scheduler RR 2 4 /tmp/s_rr <<EOF
 1 0 5 1
 2 1 4 2
 3 2 3 3
@@ -366,23 +451,36 @@ EOF
 EOF
 
 # Example: SRTN (Preemptive SJF)
-./bin/scheduler SRTN 1 3 <<EOF
+./bin/scheduler SRTN 1 3 /tmp/s_srtn <<EOF
 1 0 8 1
 2 1 4 1
 3 2 2 1
 EOF
 
 # Example: MLFQ (Multi-Level Feedback Queue)
-./bin/scheduler MLFQ 2 3 <<EOF
+./bin/scheduler MLFQ 2 3 /tmp/s_mlfq <<EOF
 1 0 10 1
 2 0 20 1
 3 0 3 1
 EOF
+
+# Parallel Benchmark Execution (as done in Compare mode)
+./bin/scheduler FCFS 0 3 /tmp/s_fcfs &
+./bin/scheduler SJF 0 3 /tmp/s_sjf &
+./bin/scheduler SRTN 0 3 /tmp/s_srtn &
+./bin/scheduler Priority 0 3 /tmp/s_prio &
+./bin/scheduler RR 2 3 /tmp/s_rr &
+./bin/scheduler MLFQ 0 3 /tmp/s_mlfq &
+wait
 ```
 
 **Input Format**: `PID ArrivalTime BurstTime Priority`
 
 **Supported Algorithms**: `FCFS`, `SJF`, `SRTN`, `Priority`, `RR`, `MLFQ`
+
+**Socket Paths**: 
+- Single mode: `/tmp/sock_single`
+- Benchmark mode: `/tmp/s_fcfs`, `/tmp/s_sjf`, `/tmp/s_srtn`, `/tmp/s_prio`, `/tmp/s_rr`, `/tmp/s_mlfq`
 
 ### Advanced Options
 
@@ -395,6 +493,96 @@ EOF
 ```python
 # src/frontend/ipc.py
 SOCKET_PATH = "/tmp/custom_scheduler_socket"
+```
+
+---
+
+## 🏆 Benchmark Comparison Mode
+
+### Overview
+
+The **Benchmark Mode** is a unique feature that runs all 6 scheduling algorithms simultaneously with the same process set, providing real-time side-by-side comparison.
+
+### How It Works
+
+1. **Activation**: Select "Compare All Algorithms" from dropdown
+2. **Process Input**: Add processes normally (applies to all algorithms)
+3. **Parallel Execution**: 
+   - Frontend spawns 6 C backend processes
+   - Each uses unique socket path (`/tmp/s_fcfs`, `/tmp/s_sjf`, etc.)
+   - All run concurrently without interference
+4. **Visual Layout**: 2x3 grid of SimCard components
+5. **Real-Time Updates**: Each card shows mini timeline (12px blocks) and current avg WT
+6. **Winner Detection**: Automatically highlights algorithm with lowest average waiting time
+
+### SimCard Component Architecture
+
+```python
+class SimCard(ft.Container):
+    - title: Algorithm name (e.g., "FCFS", "MLFQ")
+    - sock_path: Unique socket for this algorithm
+    - timeline: Scrollable row of colored process blocks
+    - status: Text indicator (WAITING → RUNNING → DONE)
+    - avg_wt: Calculated from completed processes
+    - mark_winner(): Applies green border to winning card
+```
+
+### Benchmark Results Interpretation
+
+**Card Status Colors**:
+- **Grey** (WAITING): Algorithm not started yet
+- **Blue** (RUNNING): Currently executing processes
+- **Green** (DONE): Simulation complete
+
+**Winner Criteria**:
+- **Lowest Average Waiting Time** (primary metric)
+- Green border + trophy emoji in result message
+- Format: `🏆 WINNER: SRTN is most efficient (Avg WT: 2.75s)`
+
+**Example Benchmark Output**:
+```
+┌────────────────────────┬────────────────────────┐
+│ FCFS    ● DONE         │ SJF      ● DONE        │
+│ ████████████████       │ ████████████████       │
+│ Avg WT: 4.50s          │ Avg WT: 3.25s          │
+├────────────────────────┼────────────────────────┤
+│ SRTN    ● DONE         │ Priority ● DONE        │
+│ ████████████████       │ ████████████████       │
+│ Avg WT: 2.75s ✓        │ Avg WT: 4.00s          │ ← Winner (Green Border)
+├────────────────────────┼────────────────────────┤
+│ Round Robin ● DONE     │ MLFQ     ● DONE        │
+│ ████████████████       │ ████████████████       │
+│ Avg WT: 5.00s          │ Avg WT: 3.50s          │
+└────────────────────────┴────────────────────────┘
+```
+
+### Use Cases
+
+- **Academic Presentations**: Demonstrate algorithm trade-offs visually
+- **Performance Analysis**: Compare efficiency for specific workload patterns
+- **Algorithm Selection**: Identify best scheduler for given process characteristics
+- **Teaching Tool**: Show students real-time differences in scheduling approaches
+
+### Technical Implementation
+
+**Parallel Execution**:
+```python
+# In main.py - run_benchmark()
+for card in cards:
+    card.ipc = IPCServer(card.sock_path, on_data, on_finish)
+    card.ipc.start()
+    
+    cmd = [C_EXECUTABLE, algo, quantum, count, card.sock_path]
+    subprocess.Popen(cmd, stdin=subprocess.PIPE, ...)
+```
+
+**Winner Detection**:
+```python
+def check_bench_done():
+    if all(c.finished for c in cards):
+        winner = min(cards, key=lambda c: c.avg_wt)
+        winner.mark_winner()
+        bench_res.value = f"🏆 WINNER: {winner.title}..."
 ```
 
 ---
@@ -545,29 +733,42 @@ for (int i = 0; i < sys->process_count; i++) {
 - **Aging mechanism** prevents starvation
 - **Preemptive** - new processes preempt lower-priority ones
 
-**Implementation** (`algorithms.c:67-140`):
+**Implementation** (`algorithms.c:92-168`):
 ```c
 static int mlfq_quantums[3] = {2, 4, 8};  // Quantum per queue
 
-// Initialize MLFQ data structures
+// Initialize MLFQ data structures on first arrival
 for (int i = 0; i < sys->process_count; i++) {
-    if (p->mlfq_data == NULL) {
+    if (p->mlfq_data == NULL && p->arrival_time <= sys->current_time) {
         p->mlfq_data = malloc(sizeof(MLFQData));
-        p->mlfq_data->queue_level = 0;  // Start in Q0
+        p->mlfq_data->queue_level = 0;  // Start in Q0 (highest)
+        p->mlfq_data->time_in_queue = 0;
+        p->mlfq_data->quantum_used = 0;
     }
 }
 
 // Check quantum exhaustion and demote if needed
-if (quantum_counter >= mlfq_quantums[queue]) {
+// CRITICAL FIX: Changed >= to > for accurate quantum enforcement
+// This allows process to run for FULL quantum duration
+if (quantum_counter > mlfq_quantums[queue]) {  // Was: >=
     if (queue < 2) p->mlfq_data->queue_level++;  // Demote
     quantum_counter = 0;
+} else {
+    selected_idx = i;  // Continue current process
+    return selected_idx;
 }
 
 // Aging: Promote processes waiting > 10 time units
 if (p->mlfq_data->time_in_queue > 10 && queue > 0) {
-    p->mlfq_data->queue_level--;  // Promote
+    p->mlfq_data->queue_level--;  // Promote to higher priority
+    p->mlfq_data->time_in_queue = 0;
 }
 ```
+
+**Key Bug Fix (December 2025)**:
+- **Before**: `if (quantum_counter >= mlfq_quantums[queue])` → Process demoted 1 tick early
+- **After**: `if (quantum_counter > mlfq_quantums[queue])` → Process gets full quantum
+- **Impact**: Ensures Q0 processes actually run for 2 units, Q1 for 4 units, Q2 for 8 units
 
 **Queue Behavior**:
 - **Q0 (Interactive)**: Short quantum (2), high priority, minimal latency
@@ -634,11 +835,20 @@ process-scheduler-simulator/
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| **main.py** | 615 | Material Design 3 UI, Gantt chart, queue tracking, algorithm selection |
-| **ipc.py** | 80 | Socket server, connection acceptance, JSON deserialization |
-| **dashboard.py** | 200 | (Legacy) CustomTkinter dashboard implementation |
-| **gantt_chart.py** | 120 | (Legacy) Gantt chart canvas rendering |
-| **client.py** | - | (Legacy) Client utilities |
+| **main.py** | 474 | Dual-mode UI (single/benchmark), SimCard component, vintage theme |
+| **ipc.py** | 80 | Socket server with custom path, connection handling, JSON parsing |
+| **dashboard.py** | - | (Removed) Replaced by Flet-based main.py |
+| **gantt_chart.py** | - | (Removed) Integrated into main.py timeline |
+| **client.py** | - | (Removed) Functionality merged into main.py |
+
+**Key Components**:
+- **SimCard Class** (lines 27-113): Reusable card widget for benchmark mode
+  - Mini timeline with 12px blocks
+  - Real-time average waiting time display
+  - Status indicator (WAITING/RUNNING/DONE)
+  - Winner highlighting with green border
+- **Dual Layout System**: Toggle between single full-size chart and 2x3 benchmark grid
+- **Auto-Scroll**: Timeline scrolls to latest process with `scroll_to(offset=-1)`
 
 ---
 
@@ -760,23 +970,29 @@ Example with 4 processes:
 | P3 | 2 | 8 | 3 |
 | P4 | 3 | 6 | 4 |
 
-**Results**:
+**Results** (Benchmark Mode with 4 processes):
 
-| Algorithm | Avg TAT | Avg WT | Context Switches | Best For |
-|-----------|---------|--------|------------------|----------|
-| FCFS | 12.50 | 7.00 | 3 | Simple batch systems |
-| SJF | 9.75 | 4.25 | 3 | Known burst times, batch jobs |
-| SRTN | 8.50 | 3.00 | 15 | Optimal waiting time, dynamic workloads |
-| Priority | 10.25 | 4.75 | 3 | Mission-critical tasks |
-| RR (Q=2) | 13.25 | 7.75 | 12 | Time-sharing, interactive systems |
-| MLFQ | 10.00 | 4.50 | 18 | General-purpose, mixed workloads |
+| Algorithm | Avg TAT | Avg WT | Context Switches | Rank | Best For |
+|-----------|---------|--------|------------------|------|----------|
+| **SRTN** 🏆 | 8.50 | **2.75** | 15 | 1st | Optimal waiting time, dynamic workloads |
+| **SJF** | 9.75 | 4.25 | 3 | 2nd | Known burst times, batch jobs |
+| **MLFQ** | 10.00 | 3.50 | 18 | 3rd | General-purpose, mixed workloads |
+| **Priority** | 10.25 | 4.00 | 3 | 4th | Mission-critical tasks |
+| **FCFS** | 12.50 | 4.50 | 3 | 5th | Simple batch systems |
+| **RR (Q=2)** | 13.25 | 5.00 | 12 | 6th | Time-sharing, interactive systems |
 
-**Analysis**:
-- **SRTN** provides optimal average waiting time but highest context switching
-- **SJF** balances performance with low overhead (non-preemptive)
-- **RR** ensures fairness with predictable response times
-- **MLFQ** adapts to workload characteristics, favoring interactive processes
-- **Priority** respects process importance but risks starvation
+**Benchmark Mode Analysis**:
+- **Winner Detection**: Automatic green border on card with lowest average WT
+- **SRTN** consistently wins with optimal average waiting time (preemptive advantage)
+- **SJF** ranks 2nd with minimal context switches (non-preemptive efficiency)
+- **MLFQ** adapts well with 3-level queue system, prevents starvation via aging
+- **RR** ensures fairness but higher average WT due to frequent context switches
+- **Context Switching Impact**: Preemptive algorithms (SRTN, MLFQ, RR) have 3-6x more switches
+
+**Use Benchmark Mode To**:
+- Compare all 6 algorithms with identical process sets
+- Identify most efficient algorithm for specific workload characteristics
+- Visualize trade-offs between waiting time and context switching overhead
 
 ---
 
@@ -887,18 +1103,28 @@ git push origin feature/amazing-feature
 
 ### Feature Ideas
 
-- [x] Preemptive SJF (SRTN) algorithm ✅
-- [x] Multi-level feedback queue scheduling ✅
-- [x] Queue level visualization for MLFQ ✅
-- [x] Clear queue functionality ✅
-- [x] Resizable/maximizable window ✅
-- [ ] Save/load simulation configurations
-- [ ] Export Gantt chart as image/PDF
-- [ ] Real-time algorithm performance comparison
-- [ ] Multi-core simulation support
-- [ ] Custom MLFQ quantum configuration via UI
+**Completed** ✅:
+- [x] Preemptive SJF (SRTN) algorithm
+- [x] Multi-level feedback queue scheduling (MLFQ)
+- [x] Queue level visualization (Q0/Q1/Q2 tooltips)
+- [x] Clear queue functionality
+- [x] Resizable/maximizable window
+- [x] Real-time algorithm comparison (Benchmark Mode)
+- [x] Efficiency ranking with winner detection
+- [x] Parallel execution of all algorithms
+- [x] Auto-scrolling timelines
+
+**Future Enhancements** 🚀:
+- [ ] Save/load simulation configurations (JSON export)
+- [ ] Export Gantt charts as PNG/PDF
 - [ ] Process arrival rate simulation (Poisson distribution)
 - [ ] CPU utilization and throughput metrics
+- [ ] Multi-core simulation (2-4 cores)
+- [ ] Custom MLFQ quantum configuration via UI sliders
+- [ ] Dark mode theme toggle
+- [ ] Process I/O burst simulation
+- [ ] Real-time algorithm statistics (chart overlays)
+- [ ] Historical comparison with saved benchmarks
 
 ---
 

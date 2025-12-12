@@ -1,6 +1,8 @@
 #include "scheduler.h"
 #include <unistd.h> 
 #include <string.h>
+#include <stdlib.h> // Added for malloc
+#include <stdio.h>  // Added for printf
 
 // Static variables to hold Round Robin state between ticks
 static int rr_last_idx = -1;
@@ -46,7 +48,7 @@ int select_process(SystemState *sys, char *algorithm, int quantum) {
             }
         }
     }
-    // --- SRTN (Shortest Remaining Time Next - Preemptive SJF) ---
+    // --- SRTN (Shortest Remaining Time Next) ---
     else if (strcmp(algorithm, "SRTN") == 0) {
         int min_remaining = 999999;
         for (int i = 0; i < sys->process_count; i++) {
@@ -59,7 +61,7 @@ int select_process(SystemState *sys, char *algorithm, int quantum) {
             }
         }
     }
-    // --- RR ---
+    // --- RR (Round Robin) ---
     else if (strcmp(algorithm, "RR") == 0) {
         if (sys->current_time == 0) {
             rr_last_idx = -1;
@@ -88,27 +90,27 @@ int select_process(SystemState *sys, char *algorithm, int quantum) {
     }
     // --- MLFQ (Multi-Level Feedback Queue) ---
     else if (strcmp(algorithm, "MLFQ") == 0) {
-        static int mlfq_quantums[3] = {2, 4, 8};  // Queue quantums: Q0=2, Q1=4, Q2=8
+        static int mlfq_quantums[3] = {2, 4, 8};
         static int last_pid = -1;
         static int quantum_counter = 0;
         
-        // Initialize MLFQ data for all processes on first run
         if (sys->current_time == 0) {
             last_pid = -1;
             quantum_counter = 0;
         }
         
+        // Init data
         for (int i = 0; i < sys->process_count; i++) {
             Process *p = sys->processes[i];
             if (p->mlfq_data == NULL && p->arrival_time <= sys->current_time) {
                 p->mlfq_data = (MLFQData *)malloc(sizeof(MLFQData));
-                p->mlfq_data->queue_level = 0;      // Start in highest priority queue
+                p->mlfq_data->queue_level = 0;
                 p->mlfq_data->time_in_queue = 0;
                 p->mlfq_data->quantum_used = 0;
             }
         }
         
-        // Check if current process should continue or be preempted
+        // Continue current process if possible
         if (last_pid != -1) {
             for (int i = 0; i < sys->process_count; i++) {
                 if (sys->processes[i]->pid == last_pid) {
@@ -117,17 +119,15 @@ int select_process(SystemState *sys, char *algorithm, int quantum) {
                         int queue = p->mlfq_data->queue_level;
                         quantum_counter++;
                         
-                        // Check if quantum exhausted
-                        if (quantum_counter >= mlfq_quantums[queue]) {
-                            // Demote to lower queue if not already at lowest
-                            if (queue < 2) {
-                                p->mlfq_data->queue_level++;
-                            }
+                        // --- FIX HERE: Changed >= to > ---
+                        // This allows the process to run for the full quantum duration
+                        if (quantum_counter > mlfq_quantums[queue]) { 
+                            // Demote
+                            if (queue < 2) p->mlfq_data->queue_level++;
                             p->mlfq_data->quantum_used = 0;
                             quantum_counter = 0;
                             last_pid = -1;
                         } else {
-                            // Continue current process
                             selected_idx = i;
                             return selected_idx;
                         }
@@ -137,30 +137,26 @@ int select_process(SystemState *sys, char *algorithm, int quantum) {
             }
         }
         
-        // Select process from highest priority queue with ready processes
+        // Find highest priority process
         for (int queue = 0; queue <= 2; queue++) {
             for (int i = 0; i < sys->process_count; i++) {
                 Process *p = sys->processes[i];
-                if (p->state != STATE_TERMINATED && 
-                    p->arrival_time <= sys->current_time &&
-                    p->mlfq_data != NULL &&
-                    p->mlfq_data->queue_level == queue) {
-                    
+                if (p->state != STATE_TERMINATED && p->arrival_time <= sys->current_time &&
+                    p->mlfq_data != NULL && p->mlfq_data->queue_level == queue) {
                     selected_idx = i;
                     last_pid = p->pid;
-                    quantum_counter = 1;
-                    p->mlfq_data->time_in_queue = 0;  // Reset waiting time
+                    quantum_counter = 1; // Starts at 1, so > Limit works perfectly
+                    p->mlfq_data->time_in_queue = 0;
                     return selected_idx;
                 }
             }
         }
         
-        // Aging mechanism: boost processes waiting too long (prevent starvation)
+        // Aging (Prevent Starvation)
         for (int i = 0; i < sys->process_count; i++) {
             Process *p = sys->processes[i];
-            if (p->state == STATE_READY && p->mlfq_data != NULL && p->arrival_time <= sys->current_time) {
+            if (p->state == STATE_READY && p->mlfq_data != NULL) {
                 p->mlfq_data->time_in_queue++;
-                // If waited > 10 time units, promote to higher queue
                 if (p->mlfq_data->time_in_queue > 10 && p->mlfq_data->queue_level > 0) {
                     p->mlfq_data->queue_level--;
                     p->mlfq_data->time_in_queue = 0;
@@ -168,8 +164,9 @@ int select_process(SystemState *sys, char *algorithm, int quantum) {
             }
         }
         
-        return -1;  // No process ready
+        return -1;
     }
+    
     return selected_idx;
 }
 
@@ -197,10 +194,8 @@ void run_scheduler(SystemState *sys, char *algorithm, int quantum) {
             }
         }
 
-        // 1. Send LIVE State (for animation)
         send_update_to_ui(sys);
 
-        // 2. Check Termination & Calculate Metrics
         if (idx != -1) {
             Process *p = sys->processes[idx];
             if (p->remaining_time == 0) {
@@ -217,12 +212,10 @@ void run_scheduler(SystemState *sys, char *algorithm, int quantum) {
         usleep(100000); 
     }
 
-    // --- THE FIX IS HERE ---
-    // Send one final update so the UI receives the metrics for the LAST process
+    // Final Update
     pthread_mutex_lock(&sys->lock);
     send_update_to_ui(sys);
     pthread_mutex_unlock(&sys->lock);
-    // -----------------------
 
     sys->simulation_running = false;
     printf("Simulation Finished.\n");

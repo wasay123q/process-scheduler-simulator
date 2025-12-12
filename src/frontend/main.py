@@ -3,682 +3,472 @@ import subprocess
 import os
 from ipc import IPCServer
 
-# --- MATERIAL DESIGN 3 THEME ---
-C_EXECUTABLE = "./bin/scheduler"
+# --- PATHS ---
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(SCRIPT_DIR))
+C_EXECUTABLE = os.path.join(PROJECT_ROOT, "bin", "scheduler")
 
-# Cream & Golden Light Color Palette
-COLOR_BG = "#FFF8E1"              # Warm cream background
-COLOR_SURFACE = "#FFFBF0"         # Lighter cream surface
-COLOR_SURFACE_VARIANT = "#F5E6D3" # Beige containers
-COLOR_SURFACE_CONTAINER = "#FAF3E0" # Cards with slight cream
-COLOR_PRIMARY = "#D4A574"         # Golden brown primary
-COLOR_PRIMARY_CONTAINER = "#E8C4A0" # Light golden container
-COLOR_SECONDARY = "#A68A64"       # Darker tan
-COLOR_TERTIARY = "#C8A882"        # Medium tan accent
-COLOR_ON_SURFACE = "#3E2723"      # Dark brown text
-COLOR_ON_PRIMARY = "#FFFFFF"      # White text on primary
-COLOR_OUTLINE = "#B8956A"         # Golden brown borders
-COLOR_SUCCESS = "#6A9955"         # Muted green
-COLOR_WARNING = "#C89F5D"         # Golden warning
-COLOR_ERROR = "#B55A5A"           # Muted red
+# --- THEME: VINTAGE CREAM ---
+COL_BG = "#FFF8E1"       # Cream Background
+COL_CARD = "#FFFFFF"     # White Card
+COL_PRIMARY = "#5D4037"  # Deep Brown (Text/Headers)
+COL_ACCENT = "#8D6E63"   # Lighter Brown (Borders)
+COL_INPUT_BG = "#FFFFFF" # Input Background
+COL_BTN_ADD = "#D7CCC8"  # Beige/Brown Button
+COL_BTN_RUN = "#66BB6A"  # Green Button
+COL_BTN_CLR = "#EF5350"  # Red Button
 
-# Process Colors (Soft pastel palette for light theme)
-P_COLORS = [
-    "#A7C7E7",  # Soft Blue
-    "#F4A7B9",  # Soft Pink  
-    "#B8E6B8",  # Soft Green
-    "#FFD98E",  # Soft Yellow
-    "#D4B5E1",  # Soft Purple
-    "#FFBB9A",  # Soft Peach
-]
+P_COLORS = ["#EF9A9A", "#A5D6A7", "#90CAF9", "#FFF59D", "#CE93D8", "#FFCC80"]
 
-def main(page: ft.Page):
-    # --- 1. Page Setup ---
-    page.title = "Process Scheduler Simulator"
-    page.bgcolor = COLOR_BG
-    page.theme_mode = ft.ThemeMode.LIGHT
-    page.padding = 20
-    page.window_width = 1450
-    page.window_height = 920
-    page.window_resizable = True
-    page.window_maximizable = True
-    page.window_minimizable = True
-    page.fonts = {
-        "Roboto": "https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
-    }
-    page.theme = ft.Theme(
-        color_scheme_seed=COLOR_PRIMARY,
-        use_material3=True,
-    )
-    
-    # State
-    processes = [] 
-    ipc = None
-    subprocess_proc = None
-
-    # --- 2. UI Components ---
-
-    status_text = ft.Text("IDLE", size=12, weight=ft.FontWeight.W_600, color=COLOR_SECONDARY)
-    status_container = ft.Container(
-        content=ft.Row([
-            ft.Icon(ft.Icons.CIRCLE, size=10, color=COLOR_SECONDARY),
-            ft.Container(width=8),
-            status_text
-        ], spacing=0),
-        bgcolor=COLOR_SURFACE_VARIANT, 
-        padding=ft.padding.symmetric(horizontal=20, vertical=10),
-        border_radius=24,
-        border=ft.border.all(2, COLOR_OUTLINE),
-        animate=ft.Animation(300, ft.AnimationCurve.EASE_IN_OUT),
-        shadow=ft.BoxShadow(
-            spread_radius=0,
-            blur_radius=3,
-            color=ft.Colors.with_opacity(0.15, COLOR_SECONDARY),
-            offset=ft.Offset(0, 2),
-        )
-    )
-
-    header = ft.Row([
-        ft.Container(
-            content=ft.Icon(ft.Icons.SCHEDULE, color=COLOR_ON_PRIMARY, size=36),
-            bgcolor=COLOR_PRIMARY,
-            border_radius=12,
-            padding=12,
-            shadow=ft.BoxShadow(
-                spread_radius=0,
-                blur_radius=4,
-                color=ft.Colors.with_opacity(0.3, COLOR_PRIMARY),
-                offset=ft.Offset(0, 2),
-            ),
-        ),
-        ft.Container(width=16),
-        ft.Column([
-            ft.Text("Process Scheduler", size=32, weight=ft.FontWeight.W_700, color=COLOR_ON_SURFACE),
-            ft.Text("Real-time CPU scheduling visualization", size=15, weight=ft.FontWeight.W_400, color=COLOR_SECONDARY),
-        ], spacing=4),
-        ft.Container(expand=True),
-        status_container
-    ], alignment=ft.MainAxisAlignment.START)
-
-    # --- LEFT SIDEBAR (Inputs) ---
-    
-    algo_dropdown = ft.Dropdown(
-        label="Scheduling Algorithm", 
-        width=300,
-        options=[
-            ft.dropdown.Option("FCFS", "First Come First Served"), 
-            ft.dropdown.Option("SJF", "Shortest Job First"),
-            ft.dropdown.Option("SRTN", "Shortest Remaining Time Next"),
-            ft.dropdown.Option("Priority", "Priority Scheduling"), 
-            ft.dropdown.Option("RR", "Round Robin"),
-            ft.dropdown.Option("MLFQ", "Multi-Level Feedback Queue"),
-        ],
-        value="FCFS", 
-        border_color=COLOR_OUTLINE,
-        focused_border_color=COLOR_PRIMARY,
-        text_style=ft.TextStyle(color=COLOR_ON_SURFACE, size=14, weight=ft.FontWeight.W_500),
-        label_style=ft.TextStyle(color=COLOR_SECONDARY, size=12),
-        bgcolor=COLOR_SURFACE,
-        border_radius=10,
-        content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
-    )
-
-    quantum_field = ft.TextField(
-        label="Time Quantum", 
-        value="2", 
-        width=300,
-        visible=False, 
-        border_color=COLOR_OUTLINE,
-        focused_border_color=COLOR_PRIMARY,
-        text_style=ft.TextStyle(color=COLOR_ON_SURFACE, size=14, weight=ft.FontWeight.W_500),
-        label_style=ft.TextStyle(color=COLOR_SECONDARY, size=12),
-        bgcolor=COLOR_SURFACE,
-        border_radius=10,
-        content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
-        helper_text="Time slice for Round Robin",
-        helper_style=ft.TextStyle(color=COLOR_SECONDARY, size=11),
-        keyboard_type=ft.KeyboardType.NUMBER,
-    )
-
-    mlfq_info = ft.Container(
-        visible=False,
-        padding=ft.padding.all(12),
-        border_radius=8,
-        bgcolor=ft.Colors.with_opacity(0.05, COLOR_PRIMARY),
-        border=ft.border.all(1, ft.Colors.with_opacity(0.3, COLOR_PRIMARY)),
-        width=300,
-        content=ft.Column([
+# --- BENCHMARK CARD COMPONENT ---
+class SimCard(ft.Container):
+    def __init__(self, title, sock_path):
+        super().__init__()
+        self.title = title
+        self.sock_path = sock_path
+        self.ipc = None
+        self.avg_wt = 0.0
+        self.finished = False
+        
+        self.timeline = ft.Row(scroll=ft.ScrollMode.AUTO, spacing=1)
+        self.status = ft.Text("WAITING", size=10, color="grey", weight="bold")
+        self.stats_txt = ft.Text("-", size=11, color=COL_PRIMARY, weight="bold")
+        
+        # Inner Content Layout
+        self.content = ft.Column([
             ft.Row([
-                ft.Icon(ft.Icons.INFO_OUTLINE, size=16, color=COLOR_PRIMARY),
-                ft.Text("MLFQ Queues", size=12, weight=ft.FontWeight.W_600, color=COLOR_PRIMARY),
-            ], spacing=6),
-            ft.Container(height=6),
-            ft.Text("Q0: Quantum=2 | Q1: Quantum=4 | Q2: Quantum=8", 
-                   size=10, color=COLOR_ON_SURFACE),
-            ft.Text("New processes → Q0 (High Priority)", 
-                   size=10, color=COLOR_SECONDARY, italic=True),
-        ], spacing=2, tight=True),
-    )
-
-    def on_algo_change(e):
-        is_mlfq = (algo_dropdown.value == "MLFQ")
-        quantum_field.visible = (algo_dropdown.value == "RR")
-        mlfq_info.visible = is_mlfq
-        queue_column.visible = is_mlfq
+                ft.Text(title, weight="bold", color=COL_PRIMARY, size=13),
+                ft.Container(expand=True),
+                self.status
+            ]),
+            ft.Container(
+                content=self.timeline,
+                height=45, 
+                bgcolor=ft.Colors.with_opacity(0.05, "black"),
+                border_radius=5, padding=4,
+                border=ft.border.all(1, ft.Colors.with_opacity(0.1, COL_PRIMARY))
+            ),
+            ft.Row([
+                ft.Text("Avg Waiting:", size=11, color="grey"),
+                self.stats_txt
+            ], spacing=5)
+        ], spacing=5)
         
-        # Rebuild table rows to match column visibility
-        if len(proc_table.rows) > 0:
-            old_rows = proc_table.rows.copy()
-            proc_table.rows.clear()
+        self.bgcolor = COL_CARD
+        self.padding = 12
+        self.border_radius = 8
+        self.border = ft.border.all(1, ft.Colors.with_opacity(0.2, COL_PRIMARY))
+        self.animate_scale = ft.Animation(200, "easeOut")
+
+    def reset(self):
+        self.timeline.controls.clear()
+        self.status.value = "RUNNING"
+        self.status.color = "blue"
+        self.stats_txt.value = "-"
+        self.finished = False
+        self.avg_wt = 0
+        self.border = ft.border.all(1, ft.Colors.with_opacity(0.2, COL_PRIMARY))
+        self.update()
+
+    def update_sim(self, data):
+        time = data.get("time", 0)
+        procs = data.get("processes", [])
+        running = -1
+        
+        total_wt = 0
+        count = 0
+        for p in procs:
+            if p['ct'] > 0:
+                total_wt += p['wt']
+                count += 1
+            if p['state'] == 1: running = p['pid']
             
-            for i, (pid, arr, bst, pri) in enumerate(processes):
-                cells = [
-                    ft.DataCell(ft.Text(str(pid), size=14, weight=ft.FontWeight.W_700, color=COLOR_PRIMARY)),
-                    ft.DataCell(ft.Text(str(arr), size=14, weight=ft.FontWeight.W_500, color=COLOR_ON_SURFACE)),
-                    ft.DataCell(ft.Text(str(bst), size=14, weight=ft.FontWeight.W_500, color=COLOR_ON_SURFACE)),
-                    ft.DataCell(ft.Text(str(pri), size=14, weight=ft.FontWeight.W_500, color=COLOR_ON_SURFACE)),
-                ]
-                
-                # Add Queue cell only if MLFQ
-                if is_mlfq:
-                    cells.append(ft.DataCell(ft.Text("—", size=14, weight=ft.FontWeight.W_400, color=COLOR_SECONDARY)))
-                
-                # Add metric cells
-                cells.extend([
-                    ft.DataCell(ft.Text("—", size=14, weight=ft.FontWeight.W_400, color=COLOR_SECONDARY)),
-                    ft.DataCell(ft.Text("—", size=14, weight=ft.FontWeight.W_400, color=COLOR_SECONDARY)),
-                    ft.DataCell(ft.Text("—", size=14, weight=ft.FontWeight.W_400, color=COLOR_SECONDARY)),
-                ])
-                
-                proc_table.rows.append(
-                    ft.DataRow(
-                        cells=cells,
-                        color=COLOR_SURFACE_VARIANT if i % 2 == 0 else COLOR_SURFACE,
-                    )
-                )
-        
-        page.update()
-    algo_dropdown.on_change = on_algo_change
+        if count > 0:
+            self.avg_wt = total_wt / count
+            self.stats_txt.value = f"{self.avg_wt:.2f}s"
 
-    input_pid = ft.TextField(
-        label="PID", value="1", width=140, read_only=True,
-        border_color=COLOR_OUTLINE, text_style=ft.TextStyle(size=14, color=COLOR_ON_SURFACE, weight=ft.FontWeight.W_500),
-        label_style=ft.TextStyle(color=COLOR_SECONDARY, size=12),
-        bgcolor=COLOR_SURFACE_VARIANT, border_radius=10,
-        content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
-    )
-    input_arr = ft.TextField(
-        label="Arrival", value="0", width=140,
-        border_color=COLOR_OUTLINE, focused_border_color=COLOR_PRIMARY,
-        text_style=ft.TextStyle(color=COLOR_ON_SURFACE, size=14, weight=ft.FontWeight.W_500),
-        label_style=ft.TextStyle(color=COLOR_SECONDARY, size=12),
-        bgcolor=COLOR_SURFACE, border_radius=10,
-        content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
-        keyboard_type=ft.KeyboardType.NUMBER,
-    )
-    input_bst = ft.TextField(
-        label="Burst", value="5", width=140,
-        border_color=COLOR_OUTLINE, focused_border_color=COLOR_PRIMARY,
-        text_style=ft.TextStyle(color=COLOR_ON_SURFACE, size=14, weight=ft.FontWeight.W_500),
-        label_style=ft.TextStyle(color=COLOR_SECONDARY, size=12),
-        bgcolor=COLOR_SURFACE, border_radius=10,
-        content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
-        keyboard_type=ft.KeyboardType.NUMBER,
-    )
-    input_pri = ft.TextField(
-        label="Priority", value="1", width=140,
-        border_color=COLOR_OUTLINE, focused_border_color=COLOR_PRIMARY,
-        text_style=ft.TextStyle(color=COLOR_ON_SURFACE, size=14, weight=ft.FontWeight.W_500),
-        label_style=ft.TextStyle(color=COLOR_SECONDARY, size=12),
-        bgcolor=COLOR_SURFACE, border_radius=10,
-        content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
-        keyboard_type=ft.KeyboardType.NUMBER,
-    )
+        # Draw Block
+        if running != -1:
+            col = P_COLORS[running % len(P_COLORS)]
+            self.timeline.controls.append(
+                ft.Container(width=12, height=35, bgcolor=col, border_radius=2, 
+                             tooltip=f"T={time} | P{running}")
+            )
+        else:
+            self.timeline.controls.append(ft.Container(width=12, height=35))
+            
+        self.timeline.scroll_to(offset=-1, duration=50)
+        self.update()
 
-    # Process Table with Metrics
-    queue_column = ft.DataColumn(
-        ft.Text("Queue", size=14, weight=ft.FontWeight.W_700, color=COLOR_PRIMARY),
-        visible=False  # Hidden by default, shown only for MLFQ
-    )
+    def mark_done(self):
+        self.finished = True
+        self.status.value = "DONE"
+        self.status.color = "green"
+        self.update()
+
+    def mark_winner(self):
+        self.border = ft.border.all(3, ft.Colors.GREEN) # Thicker border for winner
+        self.update()
+
+# --- MAIN APP ---
+def main(page: ft.Page):
+    page.title = "Process Scheduler Simulator"
+    page.bgcolor = COL_BG
+    page.theme_mode = ft.ThemeMode.LIGHT
+    page.window_width = 1250
+    page.window_height = 900
+    page.window_resizable = True
+    page.padding = 20
+
+    processes = []
+    global ipc
+    ipc = None
     
+    # --- STYLES ---
+    input_style = dict(
+        height=45, text_size=14, content_padding=12, 
+        border_color=COL_ACCENT, bgcolor=COL_INPUT_BG, 
+        border_radius=8, color=COL_PRIMARY,
+        focused_border_color=COL_PRIMARY
+    )
+
+    # --- UI INPUTS ---
+    input_pid = ft.TextField(label="PID", value="1", width=70, read_only=True, **input_style, expand=True)
+    input_arr = ft.TextField(label="Arrival", value="0", **input_style, expand=True)
+    input_bst = ft.TextField(label="Burst", value="5", **input_style, expand=True)
+    input_pri = ft.TextField(label="Priority", value="1", **input_style, expand=True)
+
+    # --- TOP RIGHT STATUS INDICATOR ---
+    status_badge_text = ft.Text("IDLE", size=11, weight="bold", color=COL_PRIMARY)
+    status_badge_icon = ft.Container(width=8, height=8, border_radius=4, bgcolor="grey")
+    
+    status_indicator = ft.Container(
+        content=ft.Row([status_badge_icon, status_badge_text], spacing=8, alignment=ft.MainAxisAlignment.CENTER),
+        padding=ft.padding.symmetric(horizontal=12, vertical=6),
+        border_radius=15,
+        border=ft.border.all(1, COL_ACCENT),
+        bgcolor=ft.Colors.with_opacity(0.1, COL_PRIMARY)
+    )
+
+    # --- SINGLE MODE CHART ---
+    timeline_row = ft.Row(scroll=ft.ScrollMode.AUTO, spacing=2)
+    ruler_row = ft.Row(scroll=ft.ScrollMode.HIDDEN, spacing=0)
+    
+    single_chart_view = ft.Container(
+        content=ft.Column([
+            ft.Row([ft.Icon(ft.Icons.SHOW_CHART, color=COL_PRIMARY), ft.Text("Live Timeline", size=16, weight="bold", color=COL_PRIMARY)]),
+            ft.Container(
+                content=ft.Column([
+                    ft.Row([timeline_row, ft.Container(width=20)], scroll=ft.ScrollMode.AUTO), 
+                    ft.Container(height=1, bgcolor=COL_PRIMARY, width=3000), 
+                    ruler_row
+                ]),
+                bgcolor=COL_CARD, height=150, border_radius=10, padding=15,
+                border=ft.border.all(1, COL_ACCENT),
+                shadow=ft.BoxShadow(blur_radius=5, color=ft.Colors.with_opacity(0.1, "black"))
+            )
+        ]),
+        visible=True
+    )
+
+    # --- BENCHMARK MODE GRID ---
+    cards = [
+        SimCard("FCFS", "/tmp/s_fcfs"), SimCard("SJF", "/tmp/s_sjf"),
+        SimCard("SRTN", "/tmp/s_srtn"), SimCard("Priority", "/tmp/s_prio"),
+        SimCard("Round Robin", "/tmp/s_rr"), SimCard("MLFQ", "/tmp/s_mlfq")
+    ]
+    
+    bench_res = ft.Text("", size=16, weight="bold", color=COL_PRIMARY)
+    
+    bench_grid_view = ft.Column([
+        ft.Text("Algorithm Efficiency Comparison", size=18, weight="bold", color=COL_PRIMARY),
+        ft.Container(
+            content=ft.Column([
+                ft.Row([cards[0], cards[1]], expand=True),
+                ft.Row([cards[2], cards[3]], expand=True),
+                ft.Row([cards[4], cards[5]], expand=True),
+            ], spacing=10, scroll=ft.ScrollMode.AUTO),
+            expand=True 
+        ),
+        ft.Container(content=bench_res, alignment=ft.alignment.center, padding=10, bgcolor=COL_CARD, border_radius=10)
+    ], visible=False, expand=True)
+
+    # --- SHARED TABLE (SCROLLABLE NOW) ---
     proc_table = ft.DataTable(
         columns=[
-            ft.DataColumn(ft.Text("PID", size=14, weight=ft.FontWeight.W_700, color=COLOR_PRIMARY)),
-            ft.DataColumn(ft.Text("Arrival", size=14, weight=ft.FontWeight.W_700, color=COLOR_ON_SURFACE)),
-            ft.DataColumn(ft.Text("Burst", size=14, weight=ft.FontWeight.W_700, color=COLOR_ON_SURFACE)),
-            ft.DataColumn(ft.Text("Priority", size=14, weight=ft.FontWeight.W_700, color=COLOR_ON_SURFACE)),
-            queue_column,
-            ft.DataColumn(ft.Text("CT", size=14, weight=ft.FontWeight.W_700, color=COLOR_SUCCESS)), 
-            ft.DataColumn(ft.Text("TAT", size=14, weight=ft.FontWeight.W_700, color=COLOR_WARNING)), 
-            ft.DataColumn(ft.Text("WT", size=14, weight=ft.FontWeight.W_700, color=COLOR_ERROR)),       
+            ft.DataColumn(ft.Text("PID", weight="bold")),
+            ft.DataColumn(ft.Text("Arrival")), ft.DataColumn(ft.Text("Burst")),
+            ft.DataColumn(ft.Text("Priority")),
+            ft.DataColumn(ft.Text("CT", color="green")),
+            ft.DataColumn(ft.Text("TAT", color="orange")),
+            ft.DataColumn(ft.Text("WT", color="red")),
         ],
         rows=[],
-        border=ft.border.all(1, ft.Colors.with_opacity(0.3, COLOR_OUTLINE)),
+        heading_row_color=ft.Colors.with_opacity(0.1, COL_PRIMARY),
+        border=ft.border.all(1, COL_ACCENT),
         border_radius=10,
-        heading_row_color=COLOR_PRIMARY_CONTAINER,
-        heading_row_height=52,
-        data_row_min_height=48,
-        horizontal_lines=ft.BorderSide(1, ft.Colors.with_opacity(0.15, COLOR_OUTLINE)),
-        show_checkbox_column=False,
+        data_row_color=COL_CARD,
+        width=1000 # Ensure table is wide enough to trigger horizontal scroll if needed
     )
 
-    def add_process(e):
+    table_section = ft.Column([
+        ft.Row([ft.Icon(ft.Icons.TABLE_CHART, color=COL_PRIMARY), ft.Text("Process Queue", size=16, weight="bold", color=COL_PRIMARY)]),
+        ft.Container(
+            content=ft.Column([proc_table], scroll=ft.ScrollMode.AUTO), # <-- ADDED SCROLL HERE
+            bgcolor=COL_CARD, border_radius=10, padding=10, 
+            border=ft.border.all(1, COL_ACCENT), expand=True
+        )
+    ], expand=True)
+
+    # --- BUTTONS ---
+    btn_run_text = ft.Text("START SIMULATION", color="white", weight="bold")
+    btn_run_icon = ft.Icon(ft.Icons.PLAY_ARROW, color="white")
+
+    # --- LOGIC ---
+    def update_status(status, color):
+        status_badge_text.value = status
+        status_badge_icon.bgcolor = color
+        page.update()
+
+    def check_bench_done():
+        if all(c.finished for c in cards):
+            winner = min(cards, key=lambda c: c.avg_wt)
+            winner.mark_winner() 
+            bench_res.value = f"🏆 WINNER: {winner.title} is most efficient (Avg WT: {winner.avg_wt:.2f}s)"
+            
+            btn_run_text.value = "START SIMULATION"
+            btn_run.disabled = False
+            btn_run.opacity = 1.0
+            update_status("COMPLETED", "green")
+            page.update()
+
+    def run_benchmark():
+        input_str = "".join([f"{p[0]} {p[1]} {p[2]} {p[3]}\n" for p in processes])
+        for c in cards:
+            c.reset()
+            def on_d(d, card=c): card.update_sim(d)
+            def on_f(card=c): 
+                card.mark_done()
+                check_bench_done()
+            
+            c.ipc = IPCServer(c.sock_path, on_d, on_f)
+            c.ipc.start()
+            
+            algo = c.title
+            if "Round" in algo: algo = "RR"
+            
+            # Use user input for RR, otherwise 0 (ignored by others)
+            # MLFQ ignores this in C, so it remains safe
+            q = quantum.value if algo == "RR" else "0"
+            
+            cmd = [C_EXECUTABLE, algo, q, str(len(processes)), c.sock_path]
+            subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True).communicate(input=input_str)
+
+    def update_single(data):
+        time = data.get("time", 0)
+        procs = data.get("processes", [])
+        run_pid = -1
+        
+        for i, p in enumerate(procs):
+            if p['ct'] > 0:
+                row = proc_table.rows[i]
+                row.cells[4].content.value = str(p['ct'])
+                row.cells[5].content.value = str(p['tat'])
+                row.cells[6].content.value = str(p['wt'])
+            if p['state'] == 1: run_pid = p['pid']
+            
+        block = None
+        if run_pid != -1:
+            col = P_COLORS[run_pid % len(P_COLORS)]
+            # MLFQ Queue Visual
+            q_lvl = -1
+            for p in procs:
+                if p['pid'] == run_pid:
+                    q_lvl = p.get('q_lvl', -1)
+                    break
+            
+            tip = f"T={time} | P{run_pid}"
+            if q_lvl != -1: tip += f" | Q{q_lvl}"
+
+            block = ft.Container(width=40, height=80, bgcolor=col, border_radius=4,
+                                 alignment=ft.alignment.center, 
+                                 content=ft.Text(f"P{run_pid}", weight="bold", color="black"),
+                                 tooltip=tip)
+        else:
+            block = ft.Container(width=40, height=80, bgcolor=ft.Colors.with_opacity(0.05, "black"))
+            
+        timeline_row.controls.append(block)
+        ruler_row.controls.append(ft.Container(width=40, content=ft.Text(str(time), size=10), alignment=ft.alignment.center))
+        timeline_row.scroll_to(offset=-1, duration=100)
+        ruler_row.scroll_to(offset=-1, duration=100)
+        page.update()
+
+    def on_single_done():
+        btn_run_text.value = "START SIMULATION"
+        btn_run.disabled = False
+        btn_run.opacity = 1.0
+        update_status("COMPLETED", "green")
+        page.update()
+
+    def start_sim(e):
+        global ipc
+        if not processes: return
+        
+        btn_run_text.value = "RUNNING..."
+        btn_run.disabled = True
+        btn_run.opacity = 0.7
+        update_status("RUNNING", "blue")
+        page.update()
+        
+        if dropdown.value == "Compare All Algorithms":
+            run_benchmark()
+        else:
+            # Single Mode
+            timeline_row.controls.clear()
+            ruler_row.controls.clear()
+            for row in proc_table.rows:
+                row.cells[4].content.value = "-"
+                row.cells[5].content.value = "-"
+                row.cells[6].content.value = "-"
+            
+            ipc = IPCServer("/tmp/sock_single", update_single, on_single_done)
+            ipc.start()
+            
+            input_str = "".join([f"{p[0]} {p[1]} {p[2]} {p[3]}\n" for p in processes])
+            
+            c_algo = "FCFS"
+            if dropdown.value == "Shortest Job First": c_algo = "SJF"
+            elif dropdown.value == "Shortest Remaining Time Next": c_algo = "SRTN"
+            elif dropdown.value == "Priority Scheduling": c_algo = "Priority"
+            elif dropdown.value == "Round Robin": c_algo = "RR"
+            elif dropdown.value == "Multi-Level Feedback Queue": c_algo = "MLFQ"
+
+            cmd = [C_EXECUTABLE, c_algo, quantum.value, str(len(processes)), "/tmp/sock_single"]
+            proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+            proc.stdin.write(input_str)
+            proc.stdin.flush()
+
+    # --- SIDEBAR LOGIC ---
+    def add_p(e):
         try:
-            pid = int(input_pid.value)
-            arr = int(input_arr.value)
-            bst = int(input_bst.value)
-            pri = int(input_pri.value)
+            pid, arr, bst, pri = int(input_pid.value), int(input_arr.value), int(input_bst.value), int(input_pri.value)
             processes.append((pid, arr, bst, pri))
-            
-            # Build cells list based on whether MLFQ is selected
-            cells = [
-                ft.DataCell(ft.Text(str(pid), size=14, weight=ft.FontWeight.W_700, color=COLOR_PRIMARY)),
-                ft.DataCell(ft.Text(str(arr), size=14, weight=ft.FontWeight.W_500, color=COLOR_ON_SURFACE)),
-                ft.DataCell(ft.Text(str(bst), size=14, weight=ft.FontWeight.W_500, color=COLOR_ON_SURFACE)),
-                ft.DataCell(ft.Text(str(pri), size=14, weight=ft.FontWeight.W_500, color=COLOR_ON_SURFACE)),
-            ]
-            
-            # Add Queue cell only if MLFQ is selected
-            if algo_dropdown.value == "MLFQ":
-                cells.append(ft.DataCell(ft.Text("—", size=14, weight=ft.FontWeight.W_400, color=COLOR_SECONDARY)))
-            
-            # Add metric cells
-            cells.extend([
-                ft.DataCell(ft.Text("—", size=14, weight=ft.FontWeight.W_400, color=COLOR_SECONDARY)),  # CT
-                ft.DataCell(ft.Text("—", size=14, weight=ft.FontWeight.W_400, color=COLOR_SECONDARY)),  # TAT
-                ft.DataCell(ft.Text("—", size=14, weight=ft.FontWeight.W_400, color=COLOR_SECONDARY)),  # WT
-            ])
-            
-            proc_table.rows.append(
-                ft.DataRow(
-                    cells=cells,
-                    color=COLOR_SURFACE_VARIANT if len(proc_table.rows) % 2 == 0 else COLOR_SURFACE,
-                )
-            )
+            proc_table.rows.append(ft.DataRow(cells=[
+                ft.DataCell(ft.Text(str(pid))), ft.DataCell(ft.Text(str(arr))),
+                ft.DataCell(ft.Text(str(bst))), ft.DataCell(ft.Text(str(pri))),
+                ft.DataCell(ft.Text("-", color="green")), ft.DataCell(ft.Text("-", color="orange")),
+                ft.DataCell(ft.Text("-", color="red"))
+            ]))
             input_pid.value = str(pid + 1)
             page.update()
-        except ValueError: pass
+        except: pass
 
-    def clear_queue(e):
+    def clear_q(e):
         processes.clear()
         proc_table.rows.clear()
-        timeline_row.controls.clear()
-        ruler_row.controls.clear()
         input_pid.value = "1"
         page.update()
 
+    def on_drop_change(e):
+        is_bench = (dropdown.value == "Compare All Algorithms")
+        single_chart_view.visible = not is_bench
+        bench_grid_view.visible = is_bench
+        
+        # Show Quantum input for RR OR Compare mode
+        quantum.visible = (dropdown.value == "Round Robin" or is_bench)
+        page.update()
+
+    dropdown = ft.Dropdown(
+        options=[
+            ft.dropdown.Option("First Come First Served"),
+            ft.dropdown.Option("Shortest Job First"),
+            ft.dropdown.Option("Shortest Remaining Time Next"),
+            ft.dropdown.Option("Priority Scheduling"),
+            ft.dropdown.Option("Round Robin"),
+            ft.dropdown.Option("Multi-Level Feedback Queue"),
+            ft.dropdown.Option("Compare All Algorithms"),
+        ],
+        value="First Come First Served",
+        border_color=COL_ACCENT, text_size=13,
+        bgcolor=COL_INPUT_BG,
+        on_change=on_drop_change
+    )
+    
+    quantum = ft.TextField(label="Quantum", value="2", visible=False, **input_style)
+
+    # --- SIDEBAR CONSTRUCTION ---
     btn_add = ft.ElevatedButton(
-        "Add Process", 
-        icon=ft.Icons.ADD_CIRCLE_OUTLINE, 
-        style=ft.ButtonStyle(
-            color=COLOR_ON_PRIMARY,
-            bgcolor=COLOR_PRIMARY,
-            shape=ft.RoundedRectangleBorder(radius=10),
-            padding=ft.padding.symmetric(horizontal=24, vertical=16),
-            text_style=ft.TextStyle(size=15, weight=ft.FontWeight.W_600),
-            shadow_color=ft.Colors.with_opacity(0.25, COLOR_PRIMARY),
-            elevation=3,
-        ),
-        on_click=add_process, 
-        width=300,
+        "Add Process", icon=ft.Icons.ADD_CIRCLE_OUTLINE, 
+        on_click=add_p, bgcolor=COL_BTN_ADD, color=COL_PRIMARY, height=45, width=300,
+        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8))
     )
-
+    
     btn_clear = ft.OutlinedButton(
-        "Clear Queue",
-        icon=ft.Icons.DELETE_SWEEP_OUTLINED,
+        "Clear Queue", icon=ft.Icons.DELETE_OUTLINE,
+        on_click=clear_q, height=45, width=300,
         style=ft.ButtonStyle(
-            color=COLOR_ERROR,
-            side=ft.BorderSide(2, COLOR_ERROR),
-            shape=ft.RoundedRectangleBorder(radius=10),
-            padding=ft.padding.symmetric(horizontal=24, vertical=12),
-            text_style=ft.TextStyle(size=14, weight=ft.FontWeight.W_600),
-        ),
-        on_click=clear_queue,
-        width=300,
-    )
-
-    # --- RIGHT SIDE (Visualization) ---
-    
-    timeline_row = ft.Row(scroll=ft.ScrollMode.AUTO, spacing=3)
-    ruler_row = ft.Row(scroll=ft.ScrollMode.HIDDEN, spacing=0)
-    
-    # Create grid lines container
-    grid_lines = ft.Row(spacing=0)
-    for i in range(50):  # 50 grid lines
-        if i % 5 == 0:
-            grid_lines.controls.append(
-                ft.Container(width=45, height=120, 
-                           border=ft.border.only(left=ft.BorderSide(1, ft.Colors.with_opacity(0.2, COLOR_OUTLINE))))
-            )
-        else:
-            grid_lines.controls.append(
-                ft.Container(width=45, height=120,
-                           border=ft.border.only(left=ft.BorderSide(1, ft.Colors.with_opacity(0.08, COLOR_OUTLINE))))
-            )
-    
-    gantt_container = ft.Container(
-        content=ft.Stack([
-            grid_lines,  # Grid in background
-            ft.Column([
-                timeline_row,
-                ft.Container(height=2, bgcolor=COLOR_PRIMARY, width=3000, opacity=0.3),
-                ruler_row
-            ], spacing=8),
-        ]),
-        bgcolor=COLOR_SURFACE,
-        height=180, 
-        border_radius=12, 
-        padding=16,
-        border=ft.border.all(2, COLOR_OUTLINE),
-        shadow=ft.BoxShadow(
-            spread_radius=0,
-            blur_radius=4,
-            color=ft.Colors.with_opacity(0.15, COLOR_SECONDARY),
-            offset=ft.Offset(0, 2),
+            color=COL_BTN_CLR, 
+            side=ft.BorderSide(1, COL_BTN_CLR),
+            shape=ft.RoundedRectangleBorder(radius=8)
         )
     )
-
-    # --- LOGIC ---
-
-    def update_ui_from_ipc(data):
-        time = data.get("time", 0)
-        procs = data.get("processes", [])
-        
-        running_pid = -1
-        
-        # Update Table Metrics
-        is_mlfq = (algo_dropdown.value == "MLFQ")
-        
-        for i, p in enumerate(procs):
-            row = proc_table.rows[i]
-            
-            # Determine cell indices based on whether Queue column exists
-            if is_mlfq:
-                queue_idx = 4
-                ct_idx = 5
-                tat_idx = 6
-                wt_idx = 7
-            else:
-                ct_idx = 4
-                tat_idx = 5
-                wt_idx = 6
-            
-            # Update Queue Level (MLFQ only)
-            if is_mlfq and p.get('queue', -1) >= 0:
-                queue_val = f"Q{p['queue']}"
-                queue_color = COLOR_SUCCESS if p['queue'] == 0 else (COLOR_WARNING if p['queue'] == 1 else COLOR_ERROR)
-                row.cells[queue_idx].content.value = queue_val
-                row.cells[queue_idx].content.color = queue_color
-                row.cells[queue_idx].content.weight = ft.FontWeight.W_700
-            
-            if p['ct'] > 0:
-                row.cells[ct_idx].content.value = str(p['ct'])
-                row.cells[ct_idx].content.color = COLOR_SUCCESS
-                row.cells[ct_idx].content.weight = ft.FontWeight.W_600
-                
-                row.cells[tat_idx].content.value = str(p['tat'])
-                row.cells[tat_idx].content.color = COLOR_WARNING
-                row.cells[tat_idx].content.weight = ft.FontWeight.W_600
-                
-                row.cells[wt_idx].content.value = str(p['wt'])
-                row.cells[wt_idx].content.color = COLOR_ERROR
-                row.cells[wt_idx].content.weight = ft.FontWeight.W_600
-
-            if p['state'] == 1: # RUNNING
-                running_pid = p['pid']
-        
-        # --- VISUALIZATION LOGIC ---
-        block = None
-        if running_pid != -1:
-            # CASE A: Process is Running -> Colored Block
-            color = P_COLORS[running_pid % len(P_COLORS)]
-            block = ft.Container(
-                width=45, 
-                height=100, 
-                bgcolor=color, 
-                border_radius=8,
-                alignment=ft.alignment.center,
-                content=ft.Text(
-                    f"P{running_pid}", 
-                    size=14, 
-                    weight=ft.FontWeight.W_900, 
-                    color=COLOR_ON_SURFACE
-                ),
-                tooltip=f"Time: {time}\nProcess: P{running_pid}",
-                scale=ft.Scale(0.8),
-                animate_scale=ft.Animation(200, ft.AnimationCurve.EASE_OUT),
-                shadow=ft.BoxShadow(
-                    spread_radius=0,
-                    blur_radius=4,
-                    color=ft.Colors.with_opacity(0.25, color),
-                    offset=ft.Offset(0, 2),
-                ),
-                border=ft.border.all(2, ft.Colors.with_opacity(0.4, COLOR_OUTLINE)),
-            )
-        else:
-            # CASE B: CPU Idle or Finished -> Transparent Spacer
-            block = ft.Container(
-                width=45, height=110, 
-                bgcolor=ft.Colors.with_opacity(0.08, COLOR_OUTLINE), 
-                border_radius=8,
-                border=ft.border.all(1, ft.Colors.with_opacity(0.1, COLOR_OUTLINE)),
-            )
-
-        # Create the Ruler Label
-        ruler_text = ft.Container(
-            width=45, alignment=ft.alignment.center,
-            content=ft.Text(
-                str(time), 
-                size=11, 
-                weight=ft.FontWeight.W_500,
-                color=COLOR_OUTLINE
-            )
-        )
-
-        # Append Both
-        timeline_row.controls.append(block)
-        ruler_row.controls.append(ruler_text)
-        
-        # Trigger animation if it's a real block
-        if running_pid != -1:
-            block.scale = 1.0
-
-        # Scroll to keep latest in view
-        timeline_row.scroll_to(offset=-1, duration=100, curve=ft.AnimationCurve.LINEAR)
-        ruler_row.scroll_to(offset=-1, duration=100, curve=ft.AnimationCurve.LINEAR)
-        
-        page.update()
-
-    def on_sim_finished():
-        status_text.value = "COMPLETED"
-        status_text.color = COLOR_SUCCESS
-        status_container.bgcolor = ft.Colors.with_opacity(0.15, COLOR_SUCCESS)
-        status_container.border = ft.border.all(1, COLOR_SUCCESS)
-        status_container.content.controls[0].color = COLOR_SUCCESS  # Icon
-        btn_start.disabled = False
-        btn_start.text = "START SIMULATION"
-        page.update()
-
-    def start_simulation(e):
-        if not processes: return
-        
-        timeline_row.controls.clear()
-        ruler_row.controls.clear()
-        
-        # Reset Table Metrics
-        for row in proc_table.rows:
-            row.cells[4].content.value = "-"
-            row.cells[5].content.value = "-"
-            row.cells[6].content.value = "-"
-
-        global ipc, subprocess_proc
-        ipc = IPCServer(update_ui_from_ipc, on_sim_finished) 
-        if ipc.start():
-            status_text.value = "RUNNING"
-            status_text.color = COLOR_PRIMARY
-            status_container.bgcolor = ft.Colors.with_opacity(0.15, COLOR_PRIMARY)
-            status_container.border = ft.border.all(1, COLOR_PRIMARY)
-            status_container.content.controls[0].color = COLOR_PRIMARY  # Icon
-
-        cmd = [C_EXECUTABLE, algo_dropdown.value, quantum_field.value, str(len(processes))]
-        subprocess_proc = subprocess.Popen(
-            cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
-        )
-
-        input_str = ""
-        for p in processes:
-            input_str += f"{p[0]} {p[1]} {p[2]} {p[3]}\n"
-        
-        subprocess_proc.stdin.write(input_str)
-        subprocess_proc.stdin.flush()
-
-        btn_start.disabled = True
-        btn_start.text = "Running..."
-        page.update()
-
-    btn_start = ft.ElevatedButton(
-        "START SIMULATION", 
-        icon=ft.Icons.PLAY_ARROW_ROUNDED, 
-        style=ft.ButtonStyle(
-            color=COLOR_ON_PRIMARY,
-            bgcolor=COLOR_SUCCESS,
-            shape=ft.RoundedRectangleBorder(radius=10),
-            padding=ft.padding.symmetric(horizontal=28, vertical=18),
-            text_style=ft.TextStyle(size=16, weight=ft.FontWeight.W_700, letter_spacing=0.5),
-            shadow_color=ft.Colors.with_opacity(0.3, COLOR_SUCCESS),
-            elevation=4,
-        ),
-        on_click=start_simulation,
-        width=300,
+    
+    btn_run = ft.Container(
+        content=ft.Row([btn_run_icon, btn_run_text], alignment=ft.MainAxisAlignment.CENTER),
+        bgcolor=COL_BTN_RUN, alignment=ft.alignment.center, height=50, border_radius=8,
+        on_click=start_sim,
+        shadow=ft.BoxShadow(blur_radius=5, color=ft.Colors.with_opacity(0.3, "black"))
     )
 
-    # --- LAYOUT ---
     sidebar = ft.Container(
-        width=360, 
-        bgcolor=COLOR_SURFACE, 
-        border_radius=12, 
-        padding=20,
-        border=ft.border.all(2, COLOR_OUTLINE),
-        shadow=ft.BoxShadow(
-            spread_radius=0,
-            blur_radius=4,
-            color=ft.Colors.with_opacity(0.15, COLOR_SECONDARY),
-            offset=ft.Offset(0, 2),
-        ),
-        alignment=ft.alignment.top_left,
         content=ft.Column([
-            ft.Text(
-                "Configuration", 
-                size=20, 
-                weight=ft.FontWeight.W_700, 
-                color=COLOR_ON_SURFACE
-            ),
-            ft.Divider(height=1, thickness=2, color=COLOR_OUTLINE),
-            ft.Container(height=12),
-            algo_dropdown, 
-            ft.Container(height=12),
-            quantum_field,
-            mlfq_info,
-            ft.Container(height=24),
-            ft.Text(
-                "Add Process", 
-                size=20, 
-                weight=ft.FontWeight.W_700, 
-                color=COLOR_ON_SURFACE
-            ),
-            ft.Divider(height=1, thickness=2, color=COLOR_OUTLINE),
-            ft.Container(height=12),
-            ft.Row([input_pid, input_arr], spacing=16),
-            ft.Container(height=12),
-            ft.Row([input_bst, input_pri], spacing=16),
-            ft.Container(height=16),
-            btn_add,
-            ft.Container(height=10),
-            btn_clear,
+            ft.Text("Configuration", size=18, weight="bold", color=COL_PRIMARY),
+            ft.Divider(color=COL_ACCENT, thickness=1),
+            dropdown, quantum,
+            ft.Container(height=15),
+            ft.Text("Add Process", size=18, weight="bold", color=COL_PRIMARY),
+            ft.Divider(color=COL_ACCENT, thickness=1),
+            
+            # --- 2x2 INPUT GRID ---
+            ft.Row([input_pid, input_arr], spacing=10),
+            ft.Row([input_bst, input_pri], spacing=10),
+            
+            ft.Container(height=5),
+            btn_add, btn_clear,
             ft.Container(expand=True),
-            ft.Divider(height=1, thickness=2, color=COLOR_OUTLINE), 
-            ft.Container(height=16),
-            btn_start
-        ], spacing=0)
+            ft.Divider(color=COL_ACCENT, thickness=1),
+            btn_run
+        ]),
+        width=320, bgcolor=COL_CARD, border=ft.border.all(1, COL_ACCENT),
+        border_radius=15, padding=25,
+        shadow=ft.BoxShadow(blur_radius=10, color=ft.Colors.with_opacity(0.1, "black"))
     )
 
-    main_view = ft.Container(
-        expand=True, 
-        padding=12,
-        content=ft.Column([
-            ft.Row([
-                ft.Icon(ft.Icons.TIMELINE, size=22, color=COLOR_PRIMARY),
-                ft.Container(width=10),
-                ft.Text(
-                    "Live Timeline", 
-                    size=22, 
-                    weight=ft.FontWeight.W_700, 
-                    color=COLOR_ON_SURFACE
-                ),
-            ]),
-            ft.Container(height=8),
-            gantt_container, 
-            ft.Container(height=20),
-            ft.Row([
-                ft.Icon(ft.Icons.TABLE_ROWS, size=22, color=COLOR_PRIMARY),
-                ft.Container(width=10),
-                ft.Text(
-                    "Process Queue", 
-                    size=22, 
-                    weight=ft.FontWeight.W_700, 
-                    color=COLOR_ON_SURFACE
-                ),
-            ]),
-            ft.Container(height=8),
-            ft.Container(
-                content=ft.Column([
-                    proc_table,
-                ], scroll=ft.ScrollMode.AUTO),
-                bgcolor=COLOR_SURFACE, 
-                border_radius=12, 
-                padding=12, 
-                expand=True,
-                border=ft.border.all(2, COLOR_OUTLINE),
-                shadow=ft.BoxShadow(
-                    spread_radius=0,
-                    blur_radius=4,
-                    color=ft.Colors.with_opacity(0.15, COLOR_SECONDARY),
-                    offset=ft.Offset(0, 2),
-                ),
-            )
-        ], spacing=0, expand=True)
-    )
+    # --- MAIN VIEW CONSTRUCTION ---
+    content_area = ft.Column([
+        ft.Container(content=ft.Stack([single_chart_view, bench_grid_view]), expand=True), # Charts take available space
+        ft.Container(height=10),
+        ft.Container(content=table_section, height=300) # Fixed height for table area
+    ], expand=True)
 
-    # Cleanup handler
-    def on_window_event(e):
-        if e.data == "close":
-            try:
-                # Cleanup IPC
-                if ipc:
-                    ipc.running = False
-                    ipc.cleanup()
-                
-                # Terminate subprocess
-                if subprocess_proc:
-                    subprocess_proc.terminate()
-                    subprocess_proc.wait(timeout=1)
-            except:
-                pass
-    
-    page.on_window_event = on_window_event
+    header = ft.Row([
+        ft.Container(
+            content=ft.Icon(ft.Icons.ACCESS_TIME, color="white", size=28),
+            bgcolor=COL_ACCENT, padding=12, border_radius=12
+        ),
+        ft.Column([
+            ft.Text("Process Scheduler", size=26, weight="bold", color=COL_PRIMARY),
+            ft.Text("Real-time CPU scheduling visualization", color="grey", size=12)
+        ]),
+        ft.Container(expand=True),
+        status_indicator # Restored to top right
+    ], alignment=ft.MainAxisAlignment.START)
 
     page.add(
-        header, 
-        ft.Container(height=24), 
-        ft.Row(
-            [sidebar, ft.Container(width=24), main_view], 
-            expand=True, 
-            vertical_alignment=ft.CrossAxisAlignment.START
-        )
+        header,
+        ft.Divider(color="transparent", height=10),
+        ft.Row([sidebar, content_area], expand=True, vertical_alignment=ft.CrossAxisAlignment.START)
     )
 
 if __name__ == "__main__":
-    try:
-        ft.app(target=main, view=ft.AppView.FLET_APP)
-    except KeyboardInterrupt:
-        pass
+    ft.app(target=main)
