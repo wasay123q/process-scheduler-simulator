@@ -1,8 +1,8 @@
 #include "scheduler.h"
 #include <unistd.h> 
 #include <string.h>
-#include <stdlib.h> // Added for malloc
-#include <stdio.h>  // Added for printf
+#include <stdlib.h> 
+#include <stdio.h>
 
 // Static variables to hold Round Robin state between ticks
 static int rr_last_idx = -1;
@@ -22,8 +22,17 @@ int select_process(SystemState *sys, char *algorithm, int quantum) {
             }
         }
     }
-    // --- SJF ---
+    // --- SJF (Strictly Non-Preemptive) ---
     else if (strcmp(algorithm, "SJF") == 0) {
+        // 1. Check if a process is already running. 
+        // If yes, we MUST continue it until it finishes (Non-Preemptive).
+        for (int i = 0; i < sys->process_count; i++) {
+            if (sys->processes[i]->state == STATE_RUNNING) {
+                return i;
+            }
+        }
+
+        // 2. If CPU is free, pick the Shortest Job available
         int min_burst = 999999;
         for (int i = 0; i < sys->process_count; i++) {
             Process *p = sys->processes[i];
@@ -119,8 +128,7 @@ int select_process(SystemState *sys, char *algorithm, int quantum) {
                         int queue = p->mlfq_data->queue_level;
                         quantum_counter++;
                         
-                        // --- FIX HERE: Changed >= to > ---
-                        // This allows the process to run for the full quantum duration
+                        // FIX: Corrected logic to use '>'
                         if (quantum_counter > mlfq_quantums[queue]) { 
                             // Demote
                             if (queue < 2) p->mlfq_data->queue_level++;
@@ -145,14 +153,14 @@ int select_process(SystemState *sys, char *algorithm, int quantum) {
                     p->mlfq_data != NULL && p->mlfq_data->queue_level == queue) {
                     selected_idx = i;
                     last_pid = p->pid;
-                    quantum_counter = 1; // Starts at 1, so > Limit works perfectly
+                    quantum_counter = 1;
                     p->mlfq_data->time_in_queue = 0;
                     return selected_idx;
                 }
             }
         }
         
-        // Aging (Prevent Starvation)
+        // Aging
         for (int i = 0; i < sys->process_count; i++) {
             Process *p = sys->processes[i];
             if (p->state == STATE_READY && p->mlfq_data != NULL) {
