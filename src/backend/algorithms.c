@@ -3,10 +3,37 @@
 #include <string.h>
 #include <stdlib.h> 
 #include <stdio.h>
+#include <stdbool.h>
 
-// Static variables to hold Round Robin state between ticks
-static int rr_last_idx = -1;
+// --- QUEUE HELPERS FOR ROUND ROBIN ---
+#define MAX_Q 200
+static int rr_queue[MAX_Q];
+static int rr_front = 0;
+static int rr_rear = 0;
+static int rr_count = 0;
+static int rr_enqueued_tracker[MAX_Q]; 
+
+void enqueue(int pid_idx) {
+    if (rr_count >= MAX_Q) return;
+    rr_queue[rr_rear] = pid_idx;
+    rr_rear = (rr_rear + 1) % MAX_Q;
+    rr_count++;
+}
+
+int dequeue() {
+    if (rr_count == 0) return -1;
+    int pid_idx = rr_queue[rr_front];
+    rr_front = (rr_front + 1) % MAX_Q;
+    rr_count--;
+    return pid_idx;
+}
+
+// Static variables for Round Robin algorithm
 static int rr_quantum_timer = 0;
+static int rr_current_proc_idx = -1;
+
+// Static variables for MLFQ Round Robin Rotation
+static int mlfq_rr_start_idx[3] = {0, 0, 0}; // Track search start for each queue
 
 int select_process(SystemState *sys, char *algorithm, int quantum) {
     int selected_idx = -1;
@@ -22,17 +49,13 @@ int select_process(SystemState *sys, char *algorithm, int quantum) {
             }
         }
     }
-    // --- SJF (Strictly Non-Preemptive) ---
+    // --- SJF (Non-Preemptive) ---
     else if (strcmp(algorithm, "SJF") == 0) {
-        // 1. Check if a process is already running. 
-        // If yes, we MUST continue it until it finishes (Non-Preemptive).
         for (int i = 0; i < sys->process_count; i++) {
             if (sys->processes[i]->state == STATE_RUNNING) {
                 return i;
             }
         }
-
-        // 2. If CPU is free, pick the Shortest Job available
         int min_burst = 999999;
         for (int i = 0; i < sys->process_count; i++) {
             Process *p = sys->processes[i];
@@ -44,8 +67,13 @@ int select_process(SystemState *sys, char *algorithm, int quantum) {
             }
         }
     }
-    // --- Priority ---
+    // --- Priority (Non-Preemptive) ---
     else if (strcmp(algorithm, "Priority") == 0) {
+        for (int i = 0; i < sys->process_count; i++) {
+            if (sys->processes[i]->state == STATE_RUNNING) {
+                return i;
+            }
+        }
         int highest_priority = 999999;
         for (int i = 0; i < sys->process_count; i++) {
             Process *p = sys->processes[i];
@@ -57,7 +85,7 @@ int select_process(SystemState *sys, char *algorithm, int quantum) {
             }
         }
     }
-    // --- SRTN (Shortest Remaining Time Next) ---
+    // --- SRTN (Preemptive) ---
     else if (strcmp(algorithm, "SRTN") == 0) {
         int min_remaining = 999999;
         for (int i = 0; i < sys->process_count; i++) {
@@ -70,34 +98,53 @@ int select_process(SystemState *sys, char *algorithm, int quantum) {
             }
         }
     }
-    // --- RR (Round Robin) ---
+    // --- RR (Standard FIFO) ---
     else if (strcmp(algorithm, "RR") == 0) {
         if (sys->current_time == 0) {
-            rr_last_idx = -1;
+            rr_front = 0; rr_rear = 0; rr_count = 0;
             rr_quantum_timer = 0;
+            rr_current_proc_idx = -1;
+            for(int k=0; k<MAX_Q; k++) rr_enqueued_tracker[k] = 0;
         }
-        if (rr_last_idx != -1) {
-            Process *prev = sys->processes[rr_last_idx];
-            if (prev->state != STATE_TERMINATED && rr_quantum_timer < quantum) {
-                rr_quantum_timer++; 
-                return rr_last_idx;
+
+        for (int i = 0; i < sys->process_count; i++) {
+            Process *p = sys->processes[i];
+            if (p->arrival_time <= sys->current_time && 
+                p->state != STATE_TERMINATED && 
+                rr_enqueued_tracker[i] == 0) {
+                enqueue(i);
+                rr_enqueued_tracker[i] = 1;
             }
         }
-        rr_quantum_timer = 1; 
-        int start_pos = (rr_last_idx == -1) ? 0 : (rr_last_idx + 1) % sys->process_count;
-        int count = 0;
-        while (count < sys->process_count) {
-            int idx = (start_pos + count) % sys->process_count;
-            Process *p = sys->processes[idx];
-            if (p->state != STATE_TERMINATED && p->arrival_time <= sys->current_time) {
-                rr_last_idx = idx;
-                return idx;
+
+        if (rr_current_proc_idx != -1) {
+            Process *curr = sys->processes[rr_current_proc_idx];
+            if (curr->state == STATE_TERMINATED) {
+                rr_current_proc_idx = -1;
+                rr_quantum_timer = 0;
+            } else {
+                if (rr_quantum_timer < quantum) {
+                    rr_quantum_timer++;
+                    return rr_current_proc_idx;
+                } else {
+                    enqueue(rr_current_proc_idx);
+                    rr_current_proc_idx = -1;
+                    rr_quantum_timer = 0;
+                }
             }
-            count++;
         }
-        return -1; 
+
+        if (rr_current_proc_idx == -1) {
+            int next_idx = dequeue();
+            if (next_idx != -1) {
+                rr_current_proc_idx = next_idx;
+                rr_quantum_timer = 1; 
+                return rr_current_proc_idx;
+            }
+        }
+        return -1;
     }
-    // --- MLFQ (Multi-Level Feedback Queue) ---
+    // --- MLFQ (With Round Robin Rotation) ---
     else if (strcmp(algorithm, "MLFQ") == 0) {
         static int mlfq_quantums[3] = {2, 4, 8};
         static int last_pid = -1;
@@ -106,6 +153,9 @@ int select_process(SystemState *sys, char *algorithm, int quantum) {
         if (sys->current_time == 0) {
             last_pid = -1;
             quantum_counter = 0;
+            mlfq_rr_start_idx[0] = 0;
+            mlfq_rr_start_idx[1] = 0;
+            mlfq_rr_start_idx[2] = 0;
         }
         
         // Init data
@@ -128,33 +178,47 @@ int select_process(SystemState *sys, char *algorithm, int quantum) {
                         int queue = p->mlfq_data->queue_level;
                         quantum_counter++;
                         
-                        // FIX: Corrected logic to use '>'
                         if (quantum_counter > mlfq_quantums[queue]) { 
-                            // Demote
+                            // Demote and Reset
                             if (queue < 2) p->mlfq_data->queue_level++;
                             p->mlfq_data->quantum_used = 0;
                             quantum_counter = 0;
-                            last_pid = -1;
+                            last_pid = -1; 
+                            
+                            // Important: Don't return here. Let the scheduler pick the NEXT process.
+                            // This ensures fairness immediately.
                         } else {
                             selected_idx = i;
                             return selected_idx;
                         }
+                    } else {
+                         // Process finished or something weird happened
+                         last_pid = -1;
                     }
                     break;
                 }
             }
         }
         
-        // Find highest priority process
+        // Find process by scanning queues 0->1->2 with Rotation
         for (int queue = 0; queue <= 2; queue++) {
-            for (int i = 0; i < sys->process_count; i++) {
-                Process *p = sys->processes[i];
+            int start_k = mlfq_rr_start_idx[queue];
+            
+            // Loop count times to scan everyone once
+            for (int k = 0; k < sys->process_count; k++) {
+                int idx = (start_k + k) % sys->process_count; // Wrap around
+                Process *p = sys->processes[idx];
+                
                 if (p->state != STATE_TERMINATED && p->arrival_time <= sys->current_time &&
                     p->mlfq_data != NULL && p->mlfq_data->queue_level == queue) {
-                    selected_idx = i;
+                    
+                    selected_idx = idx;
                     last_pid = p->pid;
                     quantum_counter = 1;
                     p->mlfq_data->time_in_queue = 0;
+                    
+                    // Save position for NEXT search to ensure rotation
+                    mlfq_rr_start_idx[queue] = (idx + 1) % sys->process_count;
                     return selected_idx;
                 }
             }
